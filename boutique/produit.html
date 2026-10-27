@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="fr"><head><meta charset="utf-8"><base href="../"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Produit — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body>
@@ -14,17 +14,17 @@ const user=await header();
 
 const id=new URLSearchParams(location.search).get('id');
 const {data:p}=await sb.from('products').select('*,categories(name),seller_profiles(id,shop_name,logo_path,location),product_images(path,position)').eq('id',id).maybeSingle();
-if(!p){$('#pd').innerHTML='<p>Produit introuvable. <a class="lnk" href="catalogue.html">Retour à la boutique</a></p>';throw 0}
+if(!p){$('#pd').innerHTML='<p>Produit introuvable. <a class="lnk" href="boutique/catalogue.html">Retour à la boutique</a></p>';throw 0}
 const im=[...p.product_images].sort((a,b)=>a.position-b.position),S=p.seller_profiles,I=im.length?im:[{path:null}];let qty=1;
-$('#bc').innerHTML=`<a href="index.html">Accueil</a> › <a href="catalogue.html">Boutique</a> › ${p.categories?`<a href="catalogue.html?c=${p.category_id}">${esc(p.categories.name)}</a> › `:''}${esc(p.name)}`;
+$('#bc').innerHTML=`<a href="index.html">Accueil</a> › <a href="boutique/catalogue.html">Boutique</a> › ${p.categories?`<a href="boutique/catalogue.html?c=${p.category_id}">${esc(p.categories.name)}</a> › `:''}${esc(p.name)}`;
 $('#pd').innerHTML=`<div class="gal"><div class="thv">${I.map((i,k)=>`<img class="${k?'':'on'}" src="${img(i.path)}" alt="">`).join('')}</div><div class="ph big"><img id="big" src="${img(I[0].path)}" alt="${esc(p.name)}"><button type="button" class="heart ${favs().includes(p.id)?'on':''}" data-fav="${p.id}" aria-label="Favori">${ic('heart')}</button></div></div>
-<div class="info"><h1>${esc(p.name)}</h1><a class="sline" href="vendeuse.html?id=${S.id}">${mini(S)}<span>${esc(S.shop_name)}<br><small class="mut">${esc(S.location||'')}</small></span></a>
+<div class="info"><h1>${esc(p.name)}</h1><a class="sline" href="boutique/vendeuse.html?id=${S.id}">${mini(S)}<span>${esc(S.shop_name)}<br><small class="mut">${esc(S.location||'')}</small></span></a>
 <div class="price">${money(p.price_fcfa)}</div><p>${esc(p.description)}</p>
 ${p.is_available?`<div class="qrow"><span>Quantité</span><div class="q"><button type="button" id="qm" aria-label="Moins">−</button><b id="qv">1</b><button type="button" id="qp" aria-label="Plus">+</button></div></div>
-<div class="act2"><button class="btn pk" id="buyb">Commander</button><button class="btn wa" id="addb">Ajouter au panier</button><a class="btn out" href="vendeuse.html?id=${S.id}">Voir la boutique</a></div>`:'<p><b>Produit indisponible</b></p><a class="btn out" href="vendeuse.html?id='+S.id+'">Voir la boutique</a>'}
+<div class="act2"><button class="btn pk" id="buyb">Commander</button><button class="btn wa" id="addb">Ajouter au panier</button><a class="btn out" href="boutique/vendeuse.html?id=${S.id}">Voir la boutique</a></div>`:'<p><b>Produit indisponible</b></p><a class="btn out" href="boutique/vendeuse.html?id='+S.id+'">Voir la boutique</a>'}
 <ul><li>Catégorie : ${esc(p.categories?.name||'—')}</li><li>${p.is_available?'<span class="ok">En stock</span>':'Indisponible'}</li></ul></div>`;
 document.querySelectorAll('.thv img').forEach(t=>t.onclick=()=>{$('#big').src=t.src;document.querySelectorAll('.thv img').forEach(x=>x.classList.toggle('on',x===t))});
 if($('#qm')){const set=n=>{qty=Math.max(1,Math.min(99,n));$('#qv').textContent=qty};$('#qm').onclick=()=>set(qty-1);$('#qp').onclick=()=>set(qty+1);
- $('#addb').onclick=()=>{cart.add(p.id,qty);toast('Produit ajouté au panier')};$('#buyb').onclick=async()=>{cart.add(p.id,qty);location.href=(await me())?'panier.html':'connexion.html?next=panier.html'}}
+ $('#addb').onclick=()=>{cart.add(p.id,qty);toast('Produit ajouté au panier')};$('#buyb').onclick=async()=>{cart.add(p.id,qty);location.href=(await me())?'boutique/panier.html':'compte/connexion.html?next=boutique/panier.html'}}
 
 </script></body></html>

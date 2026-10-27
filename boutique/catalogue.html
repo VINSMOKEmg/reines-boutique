@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="fr"><head><meta charset="utf-8"><base href="../"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Catalogue — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body>
@@ -20,7 +20,7 @@ import {DEMO,demoCard} from './js/demo.js';import {DEMO_WHEN_EMPTY as DEMO_ON} f
 const U=new URLSearchParams(location.search);
 const {data:cats}=await sb.from('categories').select('id,name,icon').order('name');
 const cur=U.get('c');
-$('#niches').innerHTML=`<a class="chip${cur?'':' on'}" href="catalogue.html">${ic('dots')}Tout</a>`+(cats||[]).map(x=>`<a class="chip${x.id===cur?' on':''}" href="catalogue.html?c=${x.id}">${ic(x.icon)}${esc(x.name)}</a>`).join('');
+$('#niches').innerHTML=`<a class="chip${cur?'':' on'}" href="boutique/catalogue.html">${ic('dots')}Tout</a>`+(cats||[]).map(x=>`<a class="chip${x.id===cur?' on':''}" href="boutique/catalogue.html?c=${x.id}">${ic(x.icon)}${esc(x.name)}</a>`).join('');
 $('#niches .on')?.scrollIntoView({block:'nearest',inline:'center'});
 const F=$('#fl');F.c.innerHTML+=(cats||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');F.q.value=U.get('q')||'';F.c.value=U.get('c')||'';
 let q=sb.from('products').select(PSEL).eq('is_approved',true).order('created_at',{ascending:false});

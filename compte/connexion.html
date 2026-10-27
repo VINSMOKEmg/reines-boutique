@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="fr"><head><meta charset="utf-8"><base href="../"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Connexion — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body>
@@ -13,23 +13,23 @@
 <form id="rf" hidden><h2 style="font-size:22px">Nouveau mot de passe</h2><p class="mut" style="font-size:13px;margin:0">Choisissez votre nouveau mot de passe (8 caractères minimum).</p>
 <label>Nouveau mot de passe<input type="password" name="p" required minlength="8" autocomplete="new-password"></label><label>Confirmer le mot de passe<input type="password" name="p2" required minlength="8" autocomplete="new-password"></label>
 <p><button class="btn" style="width:100%">Enregistrer le mot de passe</button></p></form>
-<p class="mut" style="font-size:13px">Pas encore de compte ? <a class="lnk" id="cr" href="inscription.html">Créer un compte</a></p></div></main>
+<p class="mut" style="font-size:13px">Pas encore de compte ? <a class="lnk" id="cr" href="compte/inscription.html">Créer un compte</a></p></div></main>
 <footer class="foot" id="ftr"></footer></div></div>
 <script type="module">
-import {sb,me,requireRole,AUTH_LINK,HOME} from './js/supabase.js';
+import {sb,me,requireRole,AUTH_LINK,HOME,ROOT,safeNext} from './js/supabase.js';
 import * as cart from './js/cart.js';
 import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini,normPhone} from './js/ui.js';
 const user=await header();
 
-const f=$('#f'),rf=$('#rf'),U=new URLSearchParams(location.search),nx=U.get('next'),okNx=/^[a-z\-]+\.html/.test(nx||'');
-if(okNx){if(nx==='panier.html')$('#nx').hidden=false;$('#cr').href='inscription.html?next='+encodeURIComponent(nx)}
+const f=$('#f'),rf=$('#rf'),U=new URLSearchParams(location.search),nx=U.get('next'),okNx=!!safeNext(nx);
+if(okNx){if(nx==='boutique/panier.html')$('#nx').hidden=false;$('#cr').href='compte/inscription.html?next='+encodeURIComponent(nx)}
 // Pages réservées à un rôle : on n'y renvoie que le bon rôle, sinon vers son propre espace.
-const ONLY={'admin.html':'admin','client.html':'client','dashboard.html':'seller','mes-commandes.html':'seller','profil-boutique.html':'seller','mes-produits.html':'seller','ajouter-produit.html':'seller','modifier-produit.html':'seller'};
+const ONLY={'admin/':'admin','admin/index.html':'admin','compte/client.html':'client','vendeuse/dashboard.html':'seller','vendeuse/mes-commandes.html':'seller','vendeuse/profil-boutique.html':'seller','vendeuse/mes-produits.html':'seller','vendeuse/ajouter-produit.html':'seller','vendeuse/modifier-produit.html':'seller'};
 async function go(){
  // Membre du groupe pas encore validée par l'admin : 'pending' -> message d'attente dans l'espace cliente.
  const {data:cm}=await sb.rpc('claim_membership');
  const u=await me(),role=u?.role||'client',page=(nx||'').split('?')[0];
- if(role==='client'&&cm==='pending'&&!okNx)return location.href='client.html?attente=1';
+ if(role==='client'&&cm==='pending'&&!okNx)return location.href='compte/client.html?attente=1';
  location.href=okNx&&(!ONLY[page]||ONLY[page]===role)?nx:HOME[role]}
 // Identifiant saisi -> e-mail du compte. Un numéro n'est accepté que pour une vendeuse validée.
 async function emailOf(id){
@@ -49,7 +49,7 @@ $('#fg').onclick=async e=>{e.preventDefault();const id=f.e.value.trim();
  const email=await emailOf(id);
  // Numéro non reconnu : seules les vendeuses validées peuvent utiliser leur numéro, les autres doivent saisir leur e-mail.
  if(!email&&!id.includes('@'))return toast('Avec un numéro, cela ne fonctionne que pour une boutique déjà validée. Saisissez plutôt votre e-mail.',1);
- const {error}=email?await sb.auth.resetPasswordForEmail(email,{redirectTo:new URL('connexion.html',location.href).href}):{};
+ const {error}=email?await sb.auth.resetPasswordForEmail(email,{redirectTo:new URL('compte/connexion.html',ROOT).href}):{};
  // Même message que le compte existe ou non, pour ne pas révéler qui est inscrit.
  if(error&&/rate|limit|seconds/i.test(error.message))return toast('Trop de demandes : réessayez dans quelques minutes.',1);
  toast('Si un compte correspond, un e-mail de réinitialisation vient d’être envoyé à son adresse e-mail.')};
@@ -67,6 +67,6 @@ else if(user){
  // Déjà connectée : on le dit, avec le choix de continuer ou de changer de compte.
  else{f.hidden=true;f.insertAdjacentHTML('afterend',`<div class="note" id="already">Vous êtes déjà connectée${user.full_name?` en tant que <b>${esc(user.full_name)}</b>`:''}.</div>
   <p style="display:grid;gap:8px"><a class="btn" href="${HOME[user.role]||'index.html'}">Aller à mon espace</a><button type="button" class="btn ghost" id="sw">Se connecter avec un autre compte</button></p>`);
-  $('#sw').onclick=async()=>{await sb.auth.signOut();location.replace('connexion.html'+location.search)}}}
+  $('#sw').onclick=async()=>{await sb.auth.signOut();location.replace('compte/connexion.html'+location.search)}}}
 
 </script></body></html>

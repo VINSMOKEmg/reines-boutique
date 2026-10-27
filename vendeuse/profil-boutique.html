@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="fr"><head><meta charset="utf-8"><base href="../"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ma boutique — Espace vendeuse</title><link rel="icon" href="assets/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body class="app">
@@ -7,8 +7,8 @@
 <script type="module">
 import {sb} from './js/supabase.js';
 import {$,esc,img,toast,ic,seller,normPhone,PHONE_ERR} from './js/ui.js';
-const S=await seller('profil-boutique.html',{title:'Ma boutique',sub:'Ce que les clientes voient sur votre page boutique. Le numéro WhatsApp reçoit leurs commandes.',
- actions:u=>`<a class="btn ghost" href="vendeuse.html?id=${u.id}" target="_blank">${ic('ext')}Voir ma boutique</a>`});
+const S=await seller('vendeuse/profil-boutique.html',{title:'Ma boutique',sub:'Ce que les clientes voient sur votre page boutique. Le numéro WhatsApp reçoit leurs commandes.',
+ actions:u=>`<a class="btn ghost" href="boutique/vendeuse.html?id=${u.id}" target="_blank">${ic('ext')}Voir ma boutique</a>`});
 if(!S)throw 0;
 const {u,shop}=S;
 const ok=f=>f&&['image/jpeg','image/png','image/webp'].includes(f.type)&&f.size<=3*1024*1024;

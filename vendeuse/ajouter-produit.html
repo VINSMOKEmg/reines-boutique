@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="fr"><head><meta charset="utf-8"><base href="../"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Produit — Espace vendeuse</title><link rel="icon" href="assets/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body class="app">
@@ -7,18 +7,18 @@
 <script type="module">
 import {sb} from './js/supabase.js';
 import {$,esc,money,img,toast,ic,seller,empty} from './js/ui.js';
-// Même page pour ajouter (sans ?id) et modifier (?id=…) ; modifier-produit.html redirige ici.
+// Même page pour ajouter (sans ?id) et modifier (?id=…) ; vendeuse/modifier-produit.html redirige ici.
 const id=new URLSearchParams(location.search).get('id');
-const S=await seller('ajouter-produit.html',{title:id?'Modifier le produit':'Ajouter un produit',
+const S=await seller('vendeuse/ajouter-produit.html',{title:id?'Modifier le produit':'Ajouter un produit',
  sub:'Votre produit est publié immédiatement dans la boutique. L’administration peut le désactiver en cas de besoin.',
- actions:'<a class="btn ghost" href="mes-produits.html">Mes produits</a>'});
+ actions:'<a class="btn ghost" href="vendeuse/mes-produits.html">Mes produits</a>'});
 if(!S)throw 0;
 const {u,shop}=S;let p=null,im=[];
 const IMG_OK=x=>['image/jpeg','image/png','image/webp'].includes(x.type)&&x.size<=3*1024*1024;
 
 const {data:cats}=await sb.from('categories').select('id,name').order('name');
 if(id){const r=await sb.from('products').select('*,product_images(id,path,position)').eq('id',id).eq('seller_id',u.id).maybeSingle();p=r.data;
- if(!p){$('#app').innerHTML=`<div class="panel">${empty('box','Produit introuvable','Il a peut-être été supprimé.','<a class="btn" href="mes-produits.html">Retour à mes produits</a>')}</div>`;throw 0}
+ if(!p){$('#app').innerHTML=`<div class="panel">${empty('box','Produit introuvable','Il a peut-être été supprimé.','<a class="btn" href="vendeuse/mes-produits.html">Retour à mes produits</a>')}</div>`;throw 0}
  im=[...p.product_images].sort((a,b)=>a.position-b.position)}
 
 $('#app').innerHTML=`<div class="form-layout"><div class="panel"><form id="f" class="f">
@@ -31,7 +31,7 @@ $('#app').innerHTML=`<div class="form-layout"><div class="panel"><form id="f" cl
  <h2 class="sect">Photos</h2>
  <label>Ajouter des photos<span class="hint">JPG, PNG ou WebP, 3 Mo maximum chacune. La première photo est la photo principale.</span><input type="file" name="ph" multiple accept="image/jpeg,image/png,image/webp"></label>
  <div class="ph-grid" id="old">${im.map(i=>`<span><img src="${img(i.path)}" alt=""><button type="button" data-r="${i.id}" data-p="${esc(i.path)}" title="Retirer cette photo" aria-label="Retirer cette photo">${ic('close')}</button></span>`).join('')}</div>
- <div class="form-actions"><button class="btn">${p?'Enregistrer les modifications':'Publier le produit'}</button><a class="btn ghost" href="mes-produits.html">Annuler</a></div>
+ <div class="form-actions"><button class="btn">${p?'Enregistrer les modifications':'Publier le produit'}</button><a class="btn ghost" href="vendeuse/mes-produits.html">Annuler</a></div>
 </form></div>
 <aside class="panel sticky"><div class="panel-h"><h2>Aperçu</h2></div>
  <div class="p"><div class="ph"><img id="pi" src="${img(im[0]?.path)}" alt=""></div><div class="pb"><b id="pn">${esc(p?.name||'Nom du produit')}</b><div class="pr" id="pp">${p?money(p.price_fcfa):'0 FCFA'}</div><div class="sl">${esc(shop.shop_name)}</div></div></div>
@@ -53,6 +53,6 @@ f.onsubmit=async e=>{e.preventDefault();const bt=f.querySelector('button:not([ty
   let pos=im.length;for(const x of files){const path=`${u.id}/${r.data.id}/${crypto.randomUUID()}.${x.type.split('/')[1]}`;
    const up=await sb.storage.from('shop-media').upload(path,x,{contentType:x.type});if(up.error)throw up.error;
    await sb.from('product_images').insert({product_id:r.data.id,path,position:pos++})}
-  toast(p?'Produit enregistré':'Produit publié');setTimeout(()=>location.href='mes-produits.html',800)}
+  toast(p?'Produit enregistré':'Produit publié');setTimeout(()=>location.href='vendeuse/mes-produits.html',800)}
  catch(x){toast(x.message||'Enregistrement impossible. Votre boutique est-elle active ?',1);bt.disabled=false}};
 </script></body></html>

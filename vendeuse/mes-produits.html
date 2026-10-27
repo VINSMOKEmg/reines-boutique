@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="fr"><head><meta charset="utf-8"><base href="../"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mes produits — Espace vendeuse</title><link rel="icon" href="assets/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body class="app">
@@ -7,8 +7,8 @@
 <script type="module">
 import {sb} from './js/supabase.js';
 import {$,esc,money,img,toast,ic,seller,empty} from './js/ui.js';
-const S=await seller('mes-produits.html',{title:'Mes produits',sub:'Vos produits sur le site. Un produit indisponible reste visible mais ne peut pas être commandé.',
- actions:`<a class="btn" href="ajouter-produit.html">${ic('plus')}Ajouter un produit</a>`});
+const S=await seller('vendeuse/mes-produits.html',{title:'Mes produits',sub:'Vos produits sur le site. Un produit indisponible reste visible mais ne peut pas être commandé.',
+ actions:`<a class="btn" href="vendeuse/ajouter-produit.html">${ic('plus')}Ajouter un produit</a>`});
 if(!S)throw 0;
 const {u}=S;let P=[],F='all';
 const FL=[['all','Tous',()=>1],['on','En ligne',x=>x.is_approved&&x.is_available],['ind','Indisponibles',x=>!x.is_available],['off','Désactivés par l’admin',x=>!x.is_approved]];
@@ -22,10 +22,10 @@ function draw(){const q=$('#q').value.trim().toLowerCase(),f=FL.find(x=>x[0]===F
  $('#pl').innerHTML=L.length?'<div class="tw"><table><tr><th>Produit</th><th>Niche</th><th>Prix</th><th>État</th><th></th></tr>'+L.map(x=>{const im=[...x.product_images].sort((a,b)=>a.position-b.position)[0];
   return `<tr><td><div class="cell"><img class="th" src="${img(im?.path)}" alt=""><b>${esc(x.name)}</b></div></td><td><small>${esc(x.categories?.name||'—')}</small></td><td><b>${money(x.price_fcfa)}</b></td>
   <td>${x.is_approved?`<span class="badge ${x.is_available?'ok':''}">${x.is_available?'En ligne':'Indisponible'}</span>`:'<span class="badge no">Désactivé par l’administration</span>'}</td>
-  <td><div class="acts-row"><a class="btn ghost sm" href="produit.html?id=${x.id}" target="_blank" title="Voir sur le site">${ic('ext')}</a><a class="btn ghost sm" href="ajouter-produit.html?id=${x.id}">${ic('edit')}Modifier</a>
+  <td><div class="acts-row"><a class="btn ghost sm" href="boutique/produit.html?id=${x.id}" target="_blank" title="Voir sur le site">${ic('ext')}</a><a class="btn ghost sm" href="vendeuse/ajouter-produit.html?id=${x.id}">${ic('edit')}Modifier</a>
   <button type="button" class="btn ghost sm" data-t="${x.id}" data-v="${x.is_available}">${x.is_available?'Rendre indisponible':'Rendre disponible'}</button><button type="button" class="btn ghost sm" data-d="${x.id}" title="Supprimer" aria-label="Supprimer">${ic('trash')}</button></div></td></tr>`}).join('')+'</table></div>'
   :P.length?empty('box','Aucun produit ne correspond','Modifiez la recherche ou le filtre.')
-  :empty('box','Vous n’avez pas encore de produit','Ajoutez votre premier produit avec une belle photo : il sera visible tout de suite dans la boutique.',`<a class="btn" href="ajouter-produit.html">${ic('plus')}Ajouter mon premier produit</a>`)}
+  :empty('box','Vous n’avez pas encore de produit','Ajoutez votre premier produit avec une belle photo : il sera visible tout de suite dans la boutique.',`<a class="btn" href="vendeuse/ajouter-produit.html">${ic('plus')}Ajouter mon premier produit</a>`)}
 $('#q').oninput=draw;
 document.addEventListener('click',async e=>{const f=e.target.closest('[data-f]'),t=e.target.closest('[data-t]'),d=e.target.closest('[data-d]');
  if(f){F=f.dataset.f;draw()}

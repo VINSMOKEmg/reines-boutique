@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="fr"><head><meta charset="utf-8"><base href="../"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Administration — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body class="app">
 <div class="app-shell">
  <aside class="app-side">
-  <a class="app-brand" href="admin.html"><img src="assets/logo.png" alt=""><span><b>Les Reines</b><small>Administration</small></span></a>
+  <a class="app-brand" href="admin/index.html"><img src="assets/logo.png" alt=""><span><b>Les Reines</b><small>Administration</small></span></a>
   <nav id="nav" aria-label="Administration"></nav>
   <div class="app-side-foot">
    <a href="index.html" target="_blank" title="Voir le site"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg><span class="lbl">Voir le site</span></a>
@@ -75,6 +75,8 @@ function show(){
  document.querySelectorAll('#nav a').forEach(x=>x.classList.toggle('on',x.dataset.tab===t));
  document.querySelector('#nav .on')?.scrollIntoView({block:'nearest',inline:'center'});window.scrollTo(0,0)}
 window.addEventListener('hashchange',show);show();
+// Avec <base href="../">, un lien « #section » viserait la racine du site : on le garde sur cette page.
+document.addEventListener('click',e=>{const l=e.target.closest('a[href^="#"]');if(!l||l.getAttribute('href')==='#')return;e.preventDefault();location.hash=l.getAttribute('href')});
 
 // ---------- Outils ----------
 // Fenêtre d'édition. Champs : {k, l, t: text|tel|number|area|file|select, v, o: [[valeur, libellé]]}.
@@ -135,7 +137,7 @@ function overview(){const {MW,PR,S,P,C,O}=D,ST_=MW.map(stateOf);
  $('#todo').innerHTML=T.length?'<ul class="todo">'+T.map(([n,l,k])=>`<li><a href="#${k}"><b>${n}</b><span>${l}</span><span class="lnk">Voir →</span></a></li>`).join('')+'</ul>'
   :`<p class="ok-line"><span class="ck">${ic('check')}</span>Tout est à jour, rien à traiter.</p>`;
  const top=[...S].sort((x,y)=>P.filter(p=>p.seller_id===y.id).length-P.filter(p=>p.seller_id===x.id).length).slice(0,5);
- $('#tops').innerHTML=top.length?top.map(x=>{const n=P.filter(p=>p.seller_id===x.id).length;return `<a class="mini-row" href="vendeuse.html?id=${x.id}" target="_blank">${logo(x)}<span><b>${esc(x.shop_name)}</b><small>${esc(x.location||'')}</small></span><em>${n} ${pl(n,'produit')}</em></a>`}).join('')
+ $('#tops').innerHTML=top.length?top.map(x=>{const n=P.filter(p=>p.seller_id===x.id).length;return `<a class="mini-row" href="boutique/vendeuse.html?id=${x.id}" target="_blank">${logo(x)}<span><b>${esc(x.shop_name)}</b><small>${esc(x.location||'')}</small></span><em>${n} ${pl(n,'produit')}</em></a>`}).join('')
   :empty('store','Aucune boutique','Les boutiques apparaissent quand les membres se connectent.','<a class="btn sm" href="#membres">Ajouter une membre</a>','sm');
  const nb=(k,n)=>{const el=$('#nb-'+k);el.textContent=n;el.hidden=!n};nb('commandes',nNew);nb('vendeuses',nNoWa);nb('membres',nPend)}
 
@@ -158,7 +160,7 @@ function shopsView(){const {S,P,O,PR}=D;
   return `<article class="shop-card"><div class="sc-top">${logo(x)}<div><b>${esc(x.shop_name)}</b><small>${esc(x.location||'Localisation non renseignée')}</small></div><span class="badge ${on?'ok':'no'}">${on?'Active':'Suspendue'}</span></div>
   <dl><div><dt>WhatsApp</dt><dd>${x.whatsapp?wa(x.whatsapp):'<span class="warn">manquant</span>'}</dd></div><div><dt>Produits</dt><dd>${np.filter(y=>y.is_approved).length} / ${np.length}</dd></div><div><dt>Commandes</dt><dd>${no}</dd></div></dl>
   ${member?'':'<p class="warn">Retirée du groupe</p>'}
-  <div class="acts-row"><a class="btn ghost sm" href="vendeuse.html?id=${x.id}" target="_blank">${ic('ext')}Voir</a>${btn('es',x.id,ic('edit')+'Modifier')}${btn('st',x.id,on?'Suspendre':'Réactiver','btn ghost sm',` data-v="${on?'suspended':'active'}"`)}</div></article>`}).join('')+'</div>'
+  <div class="acts-row"><a class="btn ghost sm" href="boutique/vendeuse.html?id=${x.id}" target="_blank">${ic('ext')}Voir</a>${btn('es',x.id,ic('edit')+'Modifier')}${btn('st',x.id,on?'Suspendre':'Réactiver','btn ghost sm',` data-v="${on?'suspended':'active'}"`)}</div></article>`}).join('')+'</div>'
   :`<div class="panel">${empty('store','Aucune boutique pour le moment','Une boutique s’ouvre automatiquement quand une membre du groupe crée son compte et se connecte pour la première fois.','<a class="btn" href="#membres">Ajouter une membre</a>')}</div>`}
 
 // ---------- Membres ----------
@@ -183,7 +185,7 @@ function productsView(){const q=$('#pq').value.trim().toLowerCase(),{P,C}=D,cat=
  $('#pl').innerHTML=L.length?'<div class="tw"><table><tr><th>Produit</th><th>Niche</th><th>Prix</th><th>État</th><th></th></tr>'+L.map(x=>{const im=[...x.product_images].sort((a,b)=>a.position-b.position)[0];
   return `<tr><td><div class="cell"><img class="th" src="${img(im?.path)}" alt=""><span><b>${esc(x.name)}</b><br><small class="mut">${esc(x.seller_profiles?.shop_name)}</small></span></div></td><td><small>${esc(cat(x.category_id))}</small></td><td><b>${money(x.price_fcfa)}</b></td>
   <td><span class="badge ${x.is_approved?'ok':'no'}">${x.is_approved?'Publié':'Désactivé'}</span>${x.is_available?'':' <span class="badge">Indisponible</span>'}</td>
-  <td><div class="acts-row"><a class="btn ghost sm" href="produit.html?id=${x.id}" target="_blank" title="Voir">${ic('ext')}</a>${btn('ep',x.id,ic('edit')+'Modifier')}${btn('ap',x.id,x.is_approved?'Désactiver':'Réactiver','btn ghost sm',` data-v="${x.is_approved}"`)}${btn('dp',x.id,ic('trash'),'btn ghost sm',' title="Supprimer"')}</div></td></tr>`}).join('')+'</table></div>'
+  <td><div class="acts-row"><a class="btn ghost sm" href="boutique/produit.html?id=${x.id}" target="_blank" title="Voir">${ic('ext')}</a>${btn('ep',x.id,ic('edit')+'Modifier')}${btn('ap',x.id,x.is_approved?'Désactiver':'Réactiver','btn ghost sm',` data-v="${x.is_approved}"`)}${btn('dp',x.id,ic('trash'),'btn ghost sm',' title="Supprimer"')}</div></td></tr>`}).join('')+'</table></div>'
   :P.length?empty('box','Aucun produit ne correspond','Modifiez la recherche ou le filtre.'):empty('box','Aucun produit pour le moment','Les produits apparaissent ici dès qu’une vendeuse les publie depuis son espace.')}
 $('#pq').oninput=productsView;
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="fr"><head><meta charset="utf-8"><base href="../"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vendeuses — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body>
@@ -16,6 +16,6 @@ import {DEMO} from './js/demo.js';import {DEMO_WHEN_EMPTY as DEMO_ON} from './js
 const {data}=await sb.from('seller_profiles').select('id,shop_name,logo_path,location').eq('status','active').order('shop_name');
 // Mêmes exemples que sur l'accueil tant qu'aucune boutique n'existe, pour que le lien « Voir toutes les vendeuses » ne mène pas à une page vide.
 const demo=!(data&&data.length)&&DEMO_ON;
-$('#sellers').innerHTML=demo?'<p class="note demo-note">Exemples de présentation : les boutiques des membres arrivent bientôt.</p>'+DEMO.sellers.map(x=>`<div class="s"><div class="av">${esc(x.shop_name[0])}</div><b>${esc(x.shop_name)}</b><small>${esc(x.location)}</small><button class="btn out sm" data-demo>Voir la boutique</button></div>`).join(''):(data||[]).map(x=>`<div class="s">${x.logo_path?`<img class="av" src="${img(x.logo_path)}" alt="">`:`<div class="av">${esc(x.shop_name[0])}</div>`}<b>${esc(x.shop_name)}</b><small>${esc(x.location||'')}</small><a class="btn out sm" href="vendeuse.html?id=${x.id}">Voir la boutique</a></div>`).join('')||'<p class="mut">Les premières boutiques arrivent bientôt.</p>';
+$('#sellers').innerHTML=demo?'<p class="note demo-note">Exemples de présentation : les boutiques des membres arrivent bientôt.</p>'+DEMO.sellers.map(x=>`<div class="s"><div class="av">${esc(x.shop_name[0])}</div><b>${esc(x.shop_name)}</b><small>${esc(x.location)}</small><button class="btn out sm" data-demo>Voir la boutique</button></div>`).join(''):(data||[]).map(x=>`<div class="s">${x.logo_path?`<img class="av" src="${img(x.logo_path)}" alt="">`:`<div class="av">${esc(x.shop_name[0])}</div>`}<b>${esc(x.shop_name)}</b><small>${esc(x.location||'')}</small><a class="btn out sm" href="boutique/vendeuse.html?id=${x.id}">Voir la boutique</a></div>`).join('')||'<p class="mut">Les premières boutiques arrivent bientôt.</p>';
 
 </script></body></html>

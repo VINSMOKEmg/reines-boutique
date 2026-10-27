@@ -4,14 +4,20 @@ HTML5 / CSS3 / JavaScript natif (modules ES) + Supabase (Auth, PostgreSQL, Stora
 
 ## Arborescence
 ```
-index.html catalogue.html produit.html vendeuse.html panier.html connexion.html inscription.html client.html
-dashboard.html mes-commandes.html profil-boutique.html mes-produits.html ajouter-produit.html modifier-produit.html admin.html apropos.html contact.html 404.html
+index.html                  accueil
+404.html                    page introuvable (reste à la racine pour l’hébergeur)
+boutique/   catalogue.html  produit.html  vendeuses.html  vendeuse.html (une boutique)  panier.html
+compte/     connexion.html  inscription.html  client.html (espace cliente)
+vendeuse/   dashboard.html  mes-commandes.html  mes-produits.html  ajouter-produit.html  modifier-produit.html  profil-boutique.html
+admin/      index.html (administration, une section par ancre : #commandes, #membres…)
+infos/      apropos.html  contact.html
 css/style.css
-js/ config.js  supabase.js  cart.js  ui.js
-assets/ logo.png (256 px : en-têtes, onglet)  logo-grand.png (1080 px : impression, réseaux)  hero.jpg  placeholder.svg
-supabase/schema.sql
+js/         config.js  supabase.js  cart.js  ui.js  demo.js
+assets/     logo.png (256 px : en-têtes, onglet)  logo-grand.png (1080 px : impression, réseaux)  hero.jpg  placeholder.svg
+supabase/   schema.sql  migrations/
 ```
-`modifier-produit.html` redirige vers `ajouter-produit.html?id=…` (même formulaire pour ajouter et modifier).
+Les pages rangées dans un dossier commencent par `<base href="../">` : tous leurs liens s’écrivent depuis la racine du site (ex. `boutique/panier.html`, `assets/logo.png`). `404.html` utilise `<base href="/">`, car l’hébergeur l’affiche à n’importe quelle adresse.
+`vendeuse/modifier-produit.html` redirige vers `vendeuse/ajouter-produit.html?id=…` (même formulaire pour ajouter et modifier).
 
 ## 1. Configurer Supabase
 1. Créez un projet sur supabase.com.
@@ -29,14 +35,14 @@ Les modules ES exigent un serveur (pas de double-clic sur le fichier) :
 - `npx serve .` dans le dossier du projet.
 
 ## 3. Premier administrateur
-Créez un compte via `inscription.html`, puis dans le SQL Editor :
+Créez un compte via `compte/inscription.html`, puis dans le SQL Editor :
 `update profiles set role='admin' where id=(select id from auth.users where lower(email)=lower('votre@email.com'));`
 (La recherche passe par `auth.users`, l'e-mail réel et vérifié, et non par la copie de `profiles`.)
 
 ## 4. Vendeuses : réservé aux membres du groupe
 Le site appartient à un groupe : seules les membres peuvent vendre. Elles sont reconnues par leur **numéro WhatsApp**.
-1. Dans `admin.html` > **Membres du groupe**, l’admin ajoute le numéro WhatsApp de chaque membre (nom et e-mail facultatifs).
-2. La membre crée son compte sur `inscription.html` avec **ce même numéro** (et confirme son e-mail si la confirmation est activée).
+1. Dans `admin/` > **Membres du groupe**, l’admin ajoute le numéro WhatsApp de chaque membre (nom et e-mail facultatifs).
+2. La membre crée son compte sur `compte/inscription.html` avec **ce même numéro** (et confirme son e-mail si la confirmation est activée).
 3. Elle apparaît **« À valider »** dans l’admin (et dans « À traiter » du tableau de bord). Le numéro saisi à l’inscription n’étant pas vérifié par SMS, l’admin s’assure que c’est bien elle (par exemple sur WhatsApp), puis clique **Activer** : sa boutique est créée avec ce numéro comme WhatsApp.
 4. Elle se connecte ensuite avec **son numéro (ou son e-mail) et son mot de passe**. Elle gère seule son logo, son WhatsApp et ses produits (publiés immédiatement).
 Un compte hors liste reste cliente. Si plusieurs comptes utilisent le numéro d’une membre, l’admin les voit tous et n’active que le bon. « Retirer » une membre suspend sa boutique ; l’ajouter de nouveau la réactive.
@@ -50,7 +56,7 @@ Carte produit : **Commander** (ajoute et ouvre le panier) ou **Ajouter au panier
 Site 100 % statique : Netlify, Vercel, Cloudflare Pages ou GitHub Pages (déposer le dossier). Ajoutez l’URL finale dans Supabase > Authentication > URL Configuration.
 
 ## 7. Checklist de tests (2 vendeuses A et B, 2 clientes C1 et C2)
-- [ ] Inscription C1 : rôle `client`, accès à `client.html`, redirection refusée vers `dashboard.html` et `admin.html`.
+- [ ] Inscription C1 : rôle `client`, accès à `compte/client.html` ; en ouvrant `vendeuse/dashboard.html` ou `admin/`, elle est renvoyée vers son espace.
 - [ ] Console navigateur : `sb.from('profiles').update({role:'admin'})` est refusé (trigger + RLS).
 - [ ] Console navigateur : `sb.from('profiles').update({email:'autre@mail.com'}).eq('id', monId)` est refusé (permission denied).
 - [ ] Inscription avec « 77 123 45 67 » : `profiles.phone` vaut `221771234567` ; une membre inscrite ainsi a ce numéro comme WhatsApp de boutique dès sa première connexion.

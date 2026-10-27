@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="fr"><head><meta charset="utf-8"><base href="../"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Espace vendeuse — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body class="app">
@@ -7,9 +7,9 @@
 <script type="module">
 import {sb} from './js/supabase.js';
 import {$,esc,money,img,ic,seller,sellerOrderTable,empty} from './js/ui.js';
-const S=await seller('dashboard.html',{title:'Tableau de bord',
+const S=await seller('vendeuse/dashboard.html',{title:'Tableau de bord',
  sub:(u,s)=>`Bonjour ${esc((u.full_name||'').split(' ')[0])}, voici l’activité de ${s?.shop_name&&s.shop_name!=='Ma boutique'?esc(s.shop_name):'votre boutique'}.`,
- actions:`<a class="btn" href="ajouter-produit.html">${ic('plus')}Ajouter un produit</a>`});
+ actions:`<a class="btn" href="vendeuse/ajouter-produit.html">${ic('plus')}Ajouter un produit</a>`});
 if(!S)throw 0;
 const {u,shop}=S,pl=(n,s,p=s+'s')=>n>1?p:s;
 
@@ -21,23 +21,23 @@ const nNew=O.filter(x=>x.status==='nouvelle').length,nOn=P.filter(x=>x.is_approv
  sales=O.filter(x=>x.status==='confirmee'||x.status==='livree').reduce((a,x)=>a+x.total,0);
 
 // Bien démarrer : ce qui rend la boutique complète, tant que tout n'est pas fait.
-const ST=[[shop.shop_name&&shop.shop_name!=='Ma boutique','Donner un nom à votre boutique','profil-boutique.html'],[shop.logo_path,'Ajouter votre logo','profil-boutique.html'],
- [shop.description,'Présenter votre boutique en quelques lignes','profil-boutique.html'],[shop.whatsapp,'Renseigner votre numéro WhatsApp','profil-boutique.html'],
- [P.length,'Publier votre premier produit','ajouter-produit.html'],[P.some(x=>x.product_images.length),'Ajouter des photos à vos produits','mes-produits.html']].map(([ok,l,h])=>[!!ok,l,h]);
+const ST=[[shop.shop_name&&shop.shop_name!=='Ma boutique','Donner un nom à votre boutique','vendeuse/profil-boutique.html'],[shop.logo_path,'Ajouter votre logo','vendeuse/profil-boutique.html'],
+ [shop.description,'Présenter votre boutique en quelques lignes','vendeuse/profil-boutique.html'],[shop.whatsapp,'Renseigner votre numéro WhatsApp','vendeuse/profil-boutique.html'],
+ [P.length,'Publier votre premier produit','vendeuse/ajouter-produit.html'],[P.some(x=>x.product_images.length),'Ajouter des photos à vos produits','vendeuse/mes-produits.html']].map(([ok,l,h])=>[!!ok,l,h]);
 const done=ST.filter(x=>x[0]).length,next=ST.findIndex(x=>!x[0]);
 
-$('#app').innerHTML=`<div class="kpis">${[['cart',nNew,pl(nNew,'Demande nouvelle','Demandes nouvelles'),'mes-commandes.html',nNew],['box',nOn,pl(nOn,'Produit en ligne','Produits en ligne'),'mes-produits.html'],
- ['clock',nOff,pl(nOff,'Produit indisponible','Produits indisponibles'),'mes-produits.html'],['wallet',money(sales),'Ventes confirmées ou livrées','mes-commandes.html',0,'money-kpi']]
+$('#app').innerHTML=`<div class="kpis">${[['cart',nNew,pl(nNew,'Demande nouvelle','Demandes nouvelles'),'vendeuse/mes-commandes.html',nNew],['box',nOn,pl(nOn,'Produit en ligne','Produits en ligne'),'vendeuse/mes-produits.html'],
+ ['clock',nOff,pl(nOff,'Produit indisponible','Produits indisponibles'),'vendeuse/mes-produits.html'],['wallet',money(sales),'Ventes confirmées ou livrées','vendeuse/mes-commandes.html',0,'money-kpi']]
  .map(([i,n,l,h,al,cl])=>`<a class="kpi${al?' alert':''} ${cl||''}" href="${h}"><span class="kpi-ic">${ic(i)}</span><span><b>${n}</b>${l}</span></a>`).join('')}</div>
 ${done<ST.length?`<div class="panel start"><div class="panel-h"><h2>Bien démarrer</h2><span class="mut">${done} / ${ST.length} étapes</span></div><div class="bar"><i style="width:${done/ST.length*100}%"></i></div>
  <ol class="steps">${ST.map(([ok,l,h],i)=>`<li class="${ok?'done':i===next?'next':''}"><a href="${h}"><span class="ck">${ok?ic('check'):''}</span><span class="lbl">${l}</span>${i===next?'<span class="lnk">Commencer →</span>':''}</a></li>`).join('')}</ol></div>`:''}
 <div class="grid2">
- <div class="panel flush"><div class="panel-h"><h2>Dernières demandes</h2><a class="lnk" href="mes-commandes.html">Toutes les demandes →</a></div>
+ <div class="panel flush"><div class="panel-h"><h2>Dernières demandes</h2><a class="lnk" href="vendeuse/mes-commandes.html">Toutes les demandes →</a></div>
   ${O.length?sellerOrderTable(O.slice(0,5)):empty('cart','Aucune demande pour le moment','Quand une cliente valide son panier, sa demande apparaît ici et elle vous écrit sur WhatsApp avec la référence.','','sm')}</div>
  <div class="panel"><div class="panel-h"><h2>Ma boutique</h2><span class="badge ${shop.status==='active'?'ok':'no'}">${shop.status==='active'?'En ligne':'Suspendue'}</span></div>
   <div class="shop-prev"><div class="cover" style="${shop.cover_path?`background-image:url(${img(shop.cover_path)})`:''}"></div>
   ${shop.logo_path?`<img class="av" src="${img(shop.logo_path)}" alt="">`:`<span class="av">${esc(shop.shop_name[0])}</span>`}<b>${esc(shop.shop_name)}</b>
   <small>${esc(shop.location||'Localisation non renseignée')}</small><small>${shop.whatsapp?'WhatsApp +'+esc(shop.whatsapp):'<span class="warn">Numéro WhatsApp manquant</span>'}</small>
-  <div class="acts-row"><a class="btn ghost sm" href="vendeuse.html?id=${u.id}" target="_blank">${ic('ext')}Voir</a><a class="btn ghost sm" href="profil-boutique.html">${ic('edit')}Modifier</a></div></div></div>
+  <div class="acts-row"><a class="btn ghost sm" href="boutique/vendeuse.html?id=${u.id}" target="_blank">${ic('ext')}Voir</a><a class="btn ghost sm" href="vendeuse/profil-boutique.html">${ic('edit')}Modifier</a></div></div></div>
 </div>`;
 </script></body></html>

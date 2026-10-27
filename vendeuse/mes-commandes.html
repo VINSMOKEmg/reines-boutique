@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="fr"><head><meta charset="utf-8"><base href="../"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Commandes — Espace vendeuse</title><link rel="icon" href="assets/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body class="app">
@@ -7,7 +7,7 @@
 <script type="module">
 import {sb} from './js/supabase.js';
 import {$,toast,seller,sellerOrderTable,empty} from './js/ui.js';
-const S=await seller('mes-commandes.html',{title:'Commandes',sub:'Les demandes de vos clientes. Elles vous écrivent sur WhatsApp avec la référence : mettez à jour le statut au fil de l’échange.'});
+const S=await seller('vendeuse/mes-commandes.html',{title:'Commandes',sub:'Les demandes de vos clientes. Elles vous écrivent sur WhatsApp avec la référence : mettez à jour le statut au fil de l’échange.'});
 if(!S)throw 0;
 
 const {data,error}=await sb.from('seller_orders').select('id,ref,total,status,created_at,order_items(name,qty)').eq('seller_id',S.u.id).order('created_at',{ascending:false});
@@ -16,7 +16,7 @@ const O=data||[],FL=[['all','Toutes'],['nouvelle','Nouvelles'],['confirmee','Con
 function draw(){const L=F==='all'?O:O.filter(x=>x.status===F);
  $('#app').innerHTML=`<div class="toolbar"><div class="filters-row">${FL.map(([k,l])=>`<button type="button" class="chip${F===k?' on':''}" data-f="${k}">${l} <i>${k==='all'?O.length:O.filter(x=>x.status===k).length}</i></button>`).join('')}</div></div>
  <div class="panel flush">${L.length?sellerOrderTable(L):O.length?empty('cart','Aucune demande avec ce statut','Choisissez un autre filtre.')
-  :empty('cart','Aucune demande pour le moment','Quand une cliente valide son panier, sa demande apparaît ici. Vérifiez que votre numéro WhatsApp est à jour pour qu’elle puisse vous écrire.','<a class="btn" href="profil-boutique.html">Vérifier ma boutique</a>')}</div>`}
+  :empty('cart','Aucune demande pour le moment','Quand une cliente valide son panier, sa demande apparaît ici. Vérifiez que votre numéro WhatsApp est à jour pour qu’elle puisse vous écrire.','<a class="btn" href="vendeuse/profil-boutique.html">Vérifier ma boutique</a>')}</div>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(b){F=b.dataset.f;draw()}});
 // Le statut est enregistré par ui.js ; on met à jour les compteurs des filtres.
 document.addEventListener('change',e=>{const s=e.target.closest('[data-so]');if(!s)return;const o=O.find(x=>x.id===s.dataset.so);if(o)o.status=s.value;setTimeout(draw)});
