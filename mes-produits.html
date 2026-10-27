@@ -1,27 +1,39 @@
 <!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mes produits — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.jpg">
+<title>Mes produits — Espace vendeuse</title><link rel="icon" href="assets/logo.jpg">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css"></head><body>
-<div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
-<div class="shell"><aside id="side"></aside><main id="app" class="main"></main></div>
-<footer class="foot"><a class="brand" href="index.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><div class="fl"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7"/></svg>Livraison<br>selon la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l13-3v3"/></svg>Paiement<br>à la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Service client<br>via WhatsApp</span></div><div class="fc">© 2026 Les Reines de l’Entrepreneuriat. Tous droits réservés.</div></footer></div></div>
+<link rel="stylesheet" href="css/style.css"></head><body class="app">
+<div class="app-shell"><aside class="app-side" id="sidebar"></aside><main class="app-main"><header class="app-top" id="top"></header><div id="bn"></div><div id="app"></div></main></div>
 <script type="module">
-import {sb,me,requireRole} from './js/supabase.js';
-import * as cart from './js/cart.js';
-import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
-await header();
-const S=await seller('mes-produits.html'); if(!S) throw 0;
-const {u,shop}=S;
+import {sb} from './js/supabase.js';
+import {$,esc,money,img,toast,ic,seller,empty} from './js/ui.js';
+const S=await seller('mes-produits.html',{title:'Mes produits',sub:'Vos produits sur le site. Un produit indisponible reste visible mais ne peut pas être commandé.',
+ actions:`<a class="btn" href="ajouter-produit.html">${ic('plus')}Ajouter un produit</a>`});
+if(!S)throw 0;
+const {u}=S;let P=[],F='all';
+const FL=[['all','Tous',()=>1],['on','En ligne',x=>x.is_approved&&x.is_available],['ind','Indisponibles',x=>!x.is_available],['off','Désactivés par l’admin',x=>!x.is_approved]];
 
-async function load(){const {data}=await sb.from('products').select('id,name,price_fcfa,is_available,is_approved,product_images(path)').eq('seller_id',u.id).order('created_at',{ascending:false});
- $('#app').innerHTML=`<h1>Mes produits</h1><p><a class="btn" href="ajouter-produit.html">Ajouter un produit</a></p><div class="tw"><table>${(data||[]).map(p=>`<tr><td><img src="${img(p.product_images[0]?.path)}" width="56" height="56" style="object-fit:cover;border-radius:8px" alt=""></td><td><b>${esc(p.name)}</b><br>${money(p.price_fcfa)}</td>
- <td><span class="badge ${p.is_approved?'ok':''}">${p.is_approved?'Publié':'Désactivé par l’administration'}</span> <span class="badge ${p.is_available?'ok':'no'}">${p.is_available?'Disponible':'Indisponible'}</span></td>
- <td><a class="btn ghost sm" href="ajouter-produit.html?id=${p.id}">Modifier</a> <button class="btn ghost sm" data-t="${p.id}" data-v="${p.is_available}">${p.is_available?'Rendre indisponible':'Rendre disponible'}</button> <button class="btn ghost sm" data-d="${p.id}">Supprimer</button></td></tr>`).join('')||'<tr><td class="mut">Aucun produit pour le moment.</td></tr>'}</table></div>`;
- document.querySelectorAll('[data-t]').forEach(b=>b.onclick=async()=>{await sb.from('products').update({is_available:b.dataset.v!=='true'}).eq('id',b.dataset.t);load()});
- document.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer ce produit définitivement ?'))return;
-  const {data:im}=await sb.from('product_images').select('path').eq('product_id',b.dataset.d);if(im?.length)await sb.storage.from('shop-media').remove(im.map(i=>i.path));
-  const {error}=await sb.from('products').delete().eq('id',b.dataset.d);toast(error?'Suppression impossible (produit déjà commandé ? rendez-le indisponible)':'Produit supprimé',!!error);load()})}
+$('#app').innerHTML='<div class="toolbar"><input type="search" id="q" placeholder="Rechercher un produit…" aria-label="Rechercher"><div class="filters-row" id="fl"></div></div><div class="panel flush" id="pl"></div>';
+async function load(){
+ const {data,error}=await sb.from('products').select('id,name,price_fcfa,is_available,is_approved,categories(name),product_images(path,position)').eq('seller_id',u.id).order('created_at',{ascending:false});
+ if(error)toast('Chargement impossible : '+error.message,1);P=data||[];draw()}
+function draw(){const q=$('#q').value.trim().toLowerCase(),f=FL.find(x=>x[0]===F)[2],L=P.filter(f).filter(x=>!q||x.name.toLowerCase().includes(q));
+ $('#fl').innerHTML=FL.map(([k,l,t])=>`<button type="button" class="chip${F===k?' on':''}" data-f="${k}">${l} <i>${P.filter(t).length}</i></button>`).join('');
+ $('#pl').innerHTML=L.length?'<div class="tw"><table><tr><th>Produit</th><th>Niche</th><th>Prix</th><th>État</th><th></th></tr>'+L.map(x=>{const im=[...x.product_images].sort((a,b)=>a.position-b.position)[0];
+  return `<tr><td><div class="cell"><img class="th" src="${img(im?.path)}" alt=""><b>${esc(x.name)}</b></div></td><td><small>${esc(x.categories?.name||'—')}</small></td><td><b>${money(x.price_fcfa)}</b></td>
+  <td>${x.is_approved?`<span class="badge ${x.is_available?'ok':''}">${x.is_available?'En ligne':'Indisponible'}</span>`:'<span class="badge no">Désactivé par l’administration</span>'}</td>
+  <td><div class="acts-row"><a class="btn ghost sm" href="produit.html?id=${x.id}" target="_blank" title="Voir sur le site">${ic('ext')}</a><a class="btn ghost sm" href="ajouter-produit.html?id=${x.id}">${ic('edit')}Modifier</a>
+  <button type="button" class="btn ghost sm" data-t="${x.id}" data-v="${x.is_available}">${x.is_available?'Rendre indisponible':'Rendre disponible'}</button><button type="button" class="btn ghost sm" data-d="${x.id}" title="Supprimer" aria-label="Supprimer">${ic('trash')}</button></div></td></tr>`}).join('')+'</table></div>'
+  :P.length?empty('box','Aucun produit ne correspond','Modifiez la recherche ou le filtre.')
+  :empty('box','Vous n’avez pas encore de produit','Ajoutez votre premier produit avec une belle photo : il sera visible tout de suite dans la boutique.',`<a class="btn" href="ajouter-produit.html">${ic('plus')}Ajouter mon premier produit</a>`)}
+$('#q').oninput=draw;
+document.addEventListener('click',async e=>{const f=e.target.closest('[data-f]'),t=e.target.closest('[data-t]'),d=e.target.closest('[data-d]');
+ if(f){F=f.dataset.f;draw()}
+ if(t){const {error}=await sb.from('products').update({is_available:t.dataset.v!=='true'}).eq('id',t.dataset.t);
+  toast(error?'Mise à jour impossible':t.dataset.v==='true'?'Produit rendu indisponible':'Produit de nouveau disponible',!!error);load()}
+ if(d){const x=P.find(y=>y.id===d.dataset.d);if(!confirm(`Supprimer définitivement « ${x.name} » et ses photos ?`))return;
+  const {error}=await sb.from('products').delete().eq('id',x.id);if(error)return toast('Suppression impossible : '+error.message,1);
+  if(x.product_images.length)await sb.storage.from('shop-media').remove(x.product_images.map(i=>i.path));
+  toast('Produit supprimé');load()}});
 load();
-
 </script></body></html>

@@ -1,24 +1,43 @@
 <!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dashboard — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.jpg">
+<title>Espace vendeuse — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.jpg">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css"></head><body>
-<div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
-<div class="shell"><aside id="side"></aside><main id="app" class="main"></main></div>
-<footer class="foot"><a class="brand" href="index.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><div class="fl"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7"/></svg>Livraison<br>selon la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l13-3v3"/></svg>Paiement<br>à la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Service client<br>via WhatsApp</span></div><div class="fc">© 2026 Les Reines de l’Entrepreneuriat. Tous droits réservés.</div></footer></div></div>
+<link rel="stylesheet" href="css/style.css"></head><body class="app">
+<div class="app-shell"><aside class="app-side" id="sidebar"></aside><main class="app-main"><header class="app-top" id="top"></header><div id="bn"></div><div id="app"></div></main></div>
 <script type="module">
-import {sb,me,requireRole} from './js/supabase.js';
-import * as cart from './js/cart.js';
-import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
-await header();
-const S=await seller('dashboard.html'); if(!S) throw 0;
-const {u,shop}=S;
+import {sb} from './js/supabase.js';
+import {$,esc,money,img,ic,seller,sellerOrderTable,empty} from './js/ui.js';
+const S=await seller('dashboard.html',{title:'Tableau de bord',
+ sub:(u,s)=>`Bonjour ${esc((u.full_name||'').split(' ')[0])}, voici l’activité de ${s?.shop_name&&s.shop_name!=='Ma boutique'?esc(s.shop_name):'votre boutique'}.`,
+ actions:`<a class="btn" href="ajouter-produit.html">${ic('plus')}Ajouter un produit</a>`});
+if(!S)throw 0;
+const {u,shop}=S,pl=(n,s,p=s+'s')=>n>1?p:s;
 
-const cnt=async f=>{let q=sb.from('products').select('id',{count:'exact',head:true}).eq('seller_id',u.id);return (await f(q)).count||0};
-const [n,ok,off,ord]=await Promise.all([cnt(q=>q),cnt(q=>q.eq('is_approved',true).eq('is_available',true)),cnt(q=>q.eq('is_available',false)),sb.from('seller_orders').select('ref,total,status,created_at,order_items(name,qty)').order('created_at',{ascending:false}).limit(20)]);
-$('#app').innerHTML=`<h1>Bonjour ${esc(u.full_name)}</h1><p class="mut">${esc(shop.shop_name)}</p><div class="kp"><div><b>${ok}</b>Produits publiés</div><div><b>${n}</b>Produits au total</div><div><b>${off}</b>Indisponibles</div></div>
-<p><a class="btn" href="ajouter-produit.html">Ajouter un produit</a> <a class="btn ghost" href="profil-boutique.html">Modifier ma boutique</a></p>
-<h2 id="commandes">Demandes de commande</h2><div class="tw"><table><tr><th>Référence</th><th>Articles</th><th>Total</th><th>Statut</th></tr>${(ord.data||[]).map(o=>`<tr><td>${esc(o.ref)}</td><td>${o.order_items.map(i=>`${esc(i.name)} × ${i.qty}`).join(', ')}</td><td>${money(o.total)}</td><td><select data-s="${o.ref}">${['nouvelle','confirmee','livree','annulee'].map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('')||'<tr><td colspan="4" class="mut">Aucune demande pour le moment.</td></tr>'}</table></div>`;
-document.querySelectorAll('[data-s]').forEach(s=>s.onchange=async()=>{const {error}=await sb.from('seller_orders').update({status:s.value}).eq('ref',s.dataset.s);toast(error?'Mise à jour impossible':'Statut mis à jour',!!error)});
+const [p,o]=await Promise.all([
+ sb.from('products').select('id,is_available,is_approved,product_images(path)').eq('seller_id',u.id),
+ sb.from('seller_orders').select('id,ref,total,status,created_at,order_items(name,qty)').eq('seller_id',u.id).order('created_at',{ascending:false}).limit(200)]);
+const P=p.data||[],O=o.data||[];
+const nNew=O.filter(x=>x.status==='nouvelle').length,nOn=P.filter(x=>x.is_approved&&x.is_available).length,nOff=P.filter(x=>!x.is_available).length,
+ sales=O.filter(x=>x.status==='confirmee'||x.status==='livree').reduce((a,x)=>a+x.total,0);
 
+// Bien démarrer : ce qui rend la boutique complète, tant que tout n'est pas fait.
+const ST=[[shop.shop_name&&shop.shop_name!=='Ma boutique','Donner un nom à votre boutique','profil-boutique.html'],[shop.logo_path,'Ajouter votre logo','profil-boutique.html'],
+ [shop.description,'Présenter votre boutique en quelques lignes','profil-boutique.html'],[shop.whatsapp,'Renseigner votre numéro WhatsApp','profil-boutique.html'],
+ [P.length,'Publier votre premier produit','ajouter-produit.html'],[P.some(x=>x.product_images.length),'Ajouter des photos à vos produits','mes-produits.html']].map(([ok,l,h])=>[!!ok,l,h]);
+const done=ST.filter(x=>x[0]).length,next=ST.findIndex(x=>!x[0]);
+
+$('#app').innerHTML=`<div class="kpis">${[['cart',nNew,pl(nNew,'Demande nouvelle','Demandes nouvelles'),'mes-commandes.html',nNew],['box',nOn,pl(nOn,'Produit en ligne','Produits en ligne'),'mes-produits.html'],
+ ['clock',nOff,pl(nOff,'Produit indisponible','Produits indisponibles'),'mes-produits.html'],['wallet',money(sales),'Ventes confirmées ou livrées','mes-commandes.html',0,'money-kpi']]
+ .map(([i,n,l,h,al,cl])=>`<a class="kpi${al?' alert':''} ${cl||''}" href="${h}"><span class="kpi-ic">${ic(i)}</span><span><b>${n}</b>${l}</span></a>`).join('')}</div>
+${done<ST.length?`<div class="panel start"><div class="panel-h"><h2>Bien démarrer</h2><span class="mut">${done} / ${ST.length} étapes</span></div><div class="bar"><i style="width:${done/ST.length*100}%"></i></div>
+ <ol class="steps">${ST.map(([ok,l,h],i)=>`<li class="${ok?'done':i===next?'next':''}"><a href="${h}"><span class="ck">${ok?ic('check'):''}</span><span class="lbl">${l}</span>${i===next?'<span class="lnk">Commencer →</span>':''}</a></li>`).join('')}</ol></div>`:''}
+<div class="grid2">
+ <div class="panel flush"><div class="panel-h"><h2>Dernières demandes</h2><a class="lnk" href="mes-commandes.html">Toutes les demandes →</a></div>
+  ${O.length?sellerOrderTable(O.slice(0,5)):empty('cart','Aucune demande pour le moment','Quand une cliente valide son panier, sa demande apparaît ici et elle vous écrit sur WhatsApp avec la référence.','','sm')}</div>
+ <div class="panel"><div class="panel-h"><h2>Ma boutique</h2><span class="badge ${shop.status==='active'?'ok':'no'}">${shop.status==='active'?'En ligne':'Suspendue'}</span></div>
+  <div class="shop-prev"><div class="cover" style="${shop.cover_path?`background-image:url(${img(shop.cover_path)})`:''}"></div>
+  ${shop.logo_path?`<img class="av" src="${img(shop.logo_path)}" alt="">`:`<span class="av">${esc(shop.shop_name[0])}</span>`}<b>${esc(shop.shop_name)}</b>
+  <small>${esc(shop.location||'Localisation non renseignée')}</small><small>${shop.whatsapp?'WhatsApp +'+esc(shop.whatsapp):'<span class="warn">Numéro WhatsApp manquant</span>'}</small>
+  <div class="acts-row"><a class="btn ghost sm" href="vendeuse.html?id=${u.id}" target="_blank">${ic('ext')}Voir</a><a class="btn ghost sm" href="profil-boutique.html">${ic('edit')}Modifier</a></div></div></div>
+</div>`;
 </script></body></html>

@@ -1,30 +1,48 @@
 <!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ma boutique — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.jpg">
+<title>Ma boutique — Espace vendeuse</title><link rel="icon" href="assets/logo.jpg">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css"></head><body>
-<div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
-<div class="shell"><aside id="side"></aside><main id="app" class="main"></main></div>
-<footer class="foot"><a class="brand" href="index.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><div class="fl"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7"/></svg>Livraison<br>selon la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l13-3v3"/></svg>Paiement<br>à la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Service client<br>via WhatsApp</span></div><div class="fc">© 2026 Les Reines de l’Entrepreneuriat. Tous droits réservés.</div></footer></div></div>
+<link rel="stylesheet" href="css/style.css"></head><body class="app">
+<div class="app-shell"><aside class="app-side" id="sidebar"></aside><main class="app-main"><header class="app-top" id="top"></header><div id="bn"></div><div id="app"></div></main></div>
 <script type="module">
-import {sb,me,requireRole} from './js/supabase.js';
-import * as cart from './js/cart.js';
-import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini,normPhone,PHONE_ERR} from './js/ui.js';
-await header();
-const S=await seller('profil-boutique.html'); if(!S) throw 0;
+import {sb} from './js/supabase.js';
+import {$,esc,img,toast,ic,seller,normPhone,PHONE_ERR} from './js/ui.js';
+const S=await seller('profil-boutique.html',{title:'Ma boutique',sub:'Ce que les clientes voient sur votre page boutique. Le numéro WhatsApp reçoit leurs commandes.',
+ actions:u=>`<a class="btn ghost" href="vendeuse.html?id=${u.id}" target="_blank">${ic('ext')}Voir ma boutique</a>`});
+if(!S)throw 0;
 const {u,shop}=S;
-
 const ok=f=>f&&['image/jpeg','image/png','image/webp'].includes(f.type)&&f.size<=3*1024*1024;
 const up=async(f,tag)=>{const path=`${u.id}/${tag}-${Date.now()}.${f.type.split('/')[1]}`;const {error}=await sb.storage.from('shop-media').upload(path,f,{contentType:f.type});if(error)throw error;return path};
-$('#app').innerHTML=`<h1>Ma boutique</h1><form id="f" class="f" style="max-width:560px"><label>Nom de la boutique<input name="shop_name" required maxlength="80" value="${esc(shop.shop_name)}"></label><label>Nom complet<input name="full_name" maxlength="80" value="${esc(shop.full_name||u.full_name)}"></label>
-<label>Description<textarea name="description" rows="4" maxlength="1000">${esc(shop.description||'')}</textarea></label><label>Numéro WhatsApp de la boutique (ex. 77 123 45 67 ; hors Sénégal, avec l’indicatif)<input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" required value="${esc(shop.whatsapp||'')}"></label>
-<label>Localisation<input name="location" maxlength="120" value="${esc(shop.location||'')}"></label><label>Horaires / contact (facultatif)<input name="hours" maxlength="160" value="${esc(shop.hours||'')}"></label>
-<label>Logo (JPG, PNG ou WebP, 3 Mo max)<input type="file" name="logo" accept="image/jpeg,image/png,image/webp"></label><label>Image de couverture (facultatif)<input type="file" name="cover" accept="image/jpeg,image/png,image/webp"></label><p><button class="btn">Enregistrer</button></p></form>`;
-$('#f').onsubmit=async e=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;
+
+$('#app').innerHTML=`<div class="form-layout"><div class="panel"><form id="f" class="f">
+ <h2 class="sect">Identité</h2>
+ <label>Nom de la boutique<input name="shop_name" required minlength="2" maxlength="80" value="${esc(shop.shop_name==='Ma boutique'?'':shop.shop_name)}" placeholder="Ex. Awa Bijoux"></label>
+ <label>Votre nom<input name="full_name" maxlength="80" value="${esc(shop.full_name||u.full_name)}"></label>
+ <label>Présentation<span class="hint">Qui vous êtes, ce que vous créez, ce qui rend vos produits uniques.</span><textarea name="description" rows="5" maxlength="1000">${esc(shop.description||'')}</textarea></label>
+ <h2 class="sect">Contact</h2>
+ <label>Numéro WhatsApp de la boutique<span class="hint">Les clientes vous écrivent sur ce numéro pour commander. Ex. 77 123 45 67 ; hors Sénégal, avec l’indicatif.</span><input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" required value="${esc(shop.whatsapp||'')}"></label>
+ <div class="two"><label>Localisation<input name="location" maxlength="120" value="${esc(shop.location||'')}" placeholder="Ex. Dakar, Plateau"></label><label>Horaires (facultatif)<input name="hours" maxlength="160" value="${esc(shop.hours||'')}" placeholder="Ex. Lun–Sam, 9h–19h"></label></div>
+ <h2 class="sect">Images</h2>
+ <div class="two"><label>Logo<span class="hint">Carré de préférence. JPG, PNG ou WebP, 3 Mo max.</span><input type="file" name="logo" accept="image/jpeg,image/png,image/webp"></label>
+ <label>Image de couverture<span class="hint">Format paysage, en haut de votre page.</span><input type="file" name="cover" accept="image/jpeg,image/png,image/webp"></label></div>
+ <div class="form-actions"><button class="btn">Enregistrer</button></div>
+</form></div>
+<aside class="panel sticky"><div class="panel-h"><h2>Aperçu</h2></div>
+ <div class="shop-prev"><div class="cover" id="vc" style="${shop.cover_path?`background-image:url(${img(shop.cover_path)})`:''}"></div>
+ ${shop.logo_path?`<img class="av" id="vl" src="${img(shop.logo_path)}" alt="">`:`<span class="av" id="vl">${esc(shop.shop_name[0])}</span>`}
+ <b id="vn">${esc(shop.shop_name)}</b><small id="vloc">${esc(shop.location||'Localisation')}</small></div></aside></div>`;
+
+// Aperçu en direct.
+const f=$('#f');
+f.shop_name.oninput=()=>$('#vn').textContent=f.shop_name.value||'Ma boutique';
+f.location.oninput=()=>$('#vloc').textContent=f.location.value||'Localisation';
+f.logo.onchange=()=>{const x=f.logo.files[0];if(!x)return;const el=$('#vl');if(el.tagName==='IMG')el.src=URL.createObjectURL(x);else el.outerHTML=`<img class="av" id="vl" src="${URL.createObjectURL(x)}" alt="">`};
+f.cover.onchange=()=>{const x=f.cover.files[0];if(x)$('#vc').style.backgroundImage=`url(${URL.createObjectURL(x)})`};
+
+f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('button');b.disabled=true;
  try{const wa=normPhone(f.whatsapp.value);if(!wa)throw new Error(PHONE_ERR);
   const v={shop_name:f.shop_name.value.trim(),full_name:f.full_name.value.trim(),description:f.description.value.trim(),whatsapp:wa,location:f.location.value.trim(),hours:f.hours.value.trim()};
   for(const [k,t] of [['logo','logo'],['cover','cover']]){const x=f[k].files[0];if(x){if(!ok(x))throw new Error('Image invalide : JPG, PNG ou WebP, 3 Mo maximum.');v[k+'_path']=await up(x,t)}}
   const {error}=await sb.from('seller_profiles').update(v).eq('id',u.id);if(error)throw error;toast('Boutique enregistrée')}
  catch(x){toast(x.message||'Enregistrement impossible',1)}b.disabled=false};
-
 </script></body></html>
