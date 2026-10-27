@@ -6,8 +6,7 @@
 <div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
 
 <main class="w"><div class="auth f"><h1 style="font-size:32px">Connexion</h1><div class="note" id="nx" hidden>Connectez-vous pour valider votre commande. Vous pouvez continuer à parcourir la boutique sans compte.</div>
-<form id="f"><div class="seg"><label><input type="radio" name="t" value="client" checked>Je suis cliente</label><label><input type="radio" name="t" value="seller">Je suis vendeuse</label></div>
-<p class="mut" id="hint" style="font-size:12.5px;margin:10px 0 0"></p>
+<form id="f"><p class="mut" style="font-size:13px;margin:0">Clientes et vendeuses, connectez-vous ici : votre espace s’ouvre automatiquement.</p>
 <label>E-mail<input type="email" name="e" required autocomplete="email"></label><label>Mot de passe<input type="password" name="p" required autocomplete="current-password"></label>
 <p><button class="btn" style="width:100%">Se connecter</button></p></form>
 <p class="mut" style="font-size:13px">Pas encore de compte ? <a class="lnk" id="cr" href="inscription.html">Créer un compte</a></p></div></main>
@@ -18,19 +17,17 @@ import * as cart from './js/cart.js';
 import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
 const user=await header();
 
-const f=$('#f'),U=new URLSearchParams(location.search),nx=U.get('next');
-const HINT={client:'Passez commande et suivez vos demandes.',seller:'Réservé aux membres du groupe : gérez votre boutique et vos produits.'};
-const sh=()=>{$('#hint').textContent=HINT[f.t.value]};f.querySelectorAll('[name=t]').forEach(r=>r.onchange=sh);sh();
-if(/^[a-z\-]+\.html/.test(nx||'')){if(nx==='panier.html')$('#nx').hidden=false;$('#cr').href='inscription.html?next='+encodeURIComponent(nx)}
-f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('button.btn'),kind=f.t.value;b.disabled=true;
+const f=$('#f'),U=new URLSearchParams(location.search),nx=U.get('next'),okNx=/^[a-z\-]+\.html/.test(nx||'');
+if(okNx){if(nx==='panier.html')$('#nx').hidden=false;$('#cr').href='inscription.html?next='+encodeURIComponent(nx)}
+// Pages réservées à un rôle : on n'y renvoie que le bon rôle, sinon vers son propre espace.
+const ONLY={'admin.html':'admin','client.html':'client','dashboard.html':'seller','profil-boutique.html':'seller','mes-produits.html':'seller','ajouter-produit.html':'seller','modifier-produit.html':'seller'};
+const HOME={admin:'admin.html',seller:'dashboard.html',client:'client.html'};
+f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('button.btn');b.disabled=true;
  const {error}=await sb.auth.signInWithPassword({email:f.e.value.trim(),password:f.p.value});
- if(error){toast('E-mail ou mot de passe incorrect.',1);b.disabled=false;return}
- if(kind==='seller')await sb.rpc('claim_membership');
- const u=await me();
- const bad=m=>{sb.auth.signOut();toast(m,1);b.disabled=false};
- if(u?.role!=='admin'){
-  if(kind==='seller'&&u?.role!=='seller')return bad('Ce compte n’est pas un compte vendeuse. Seules les membres du groupe peuvent vendre : contactez l’administration. (Vérifiez aussi que votre e-mail est confirmé.)');
-  if(kind==='client'&&u?.role==='seller')return bad('Ce compte est un compte vendeuse : choisissez « Je suis vendeuse ».')}
- location.href=u?.role==='admin'?'admin.html':u?.role==='seller'?'dashboard.html':(/^[a-z\-]+\.html/.test(nx||'')?nx:'client.html')};
+ if(error){toast(/not confirmed/i.test(error.message)?'Confirmez d’abord votre e-mail (lien reçu à l’inscription), puis reconnectez-vous.':'E-mail ou mot de passe incorrect.',1);b.disabled=false;return}
+ // Membre du groupe : le compte devient vendeuse automatiquement (vérifié côté serveur, sans effet pour les autres).
+ await sb.rpc('claim_membership');
+ const u=await me(),role=u?.role||'client',page=(nx||'').split('?')[0];
+ location.href=okNx&&(!ONLY[page]||ONLY[page]===role)?nx:HOME[role]};
 
 </script></body></html>
