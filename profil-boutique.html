@@ -9,7 +9,7 @@
 <script type="module">
 import {sb,me,requireRole} from './js/supabase.js';
 import * as cart from './js/cart.js';
-import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
+import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini,normPhone,PHONE_ERR} from './js/ui.js';
 await header();
 const S=await seller('profil-boutique.html'); if(!S) throw 0;
 const {u,shop}=S;
@@ -17,11 +17,12 @@ const {u,shop}=S;
 const ok=f=>f&&['image/jpeg','image/png','image/webp'].includes(f.type)&&f.size<=3*1024*1024;
 const up=async(f,tag)=>{const path=`${u.id}/${tag}-${Date.now()}.${f.type.split('/')[1]}`;const {error}=await sb.storage.from('shop-media').upload(path,f,{contentType:f.type});if(error)throw error;return path};
 $('#app').innerHTML=`<h1>Ma boutique</h1><form id="f" class="f" style="max-width:560px"><label>Nom de la boutique<input name="shop_name" required maxlength="80" value="${esc(shop.shop_name)}"></label><label>Nom complet<input name="full_name" maxlength="80" value="${esc(shop.full_name||u.full_name)}"></label>
-<label>Description<textarea name="description" rows="4" maxlength="1000">${esc(shop.description||'')}</textarea></label><label>Numéro WhatsApp (format international sans + ni espaces, ex. 221770000000)<input name="whatsapp" inputmode="numeric" pattern="[0-9]{8,15}" value="${esc(shop.whatsapp||'')}"></label>
+<label>Description<textarea name="description" rows="4" maxlength="1000">${esc(shop.description||'')}</textarea></label><label>Numéro WhatsApp de la boutique (ex. 77 123 45 67 ; hors Sénégal, avec l’indicatif)<input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" required value="${esc(shop.whatsapp||'')}"></label>
 <label>Localisation<input name="location" maxlength="120" value="${esc(shop.location||'')}"></label><label>Horaires / contact (facultatif)<input name="hours" maxlength="160" value="${esc(shop.hours||'')}"></label>
 <label>Logo (JPG, PNG ou WebP, 3 Mo max)<input type="file" name="logo" accept="image/jpeg,image/png,image/webp"></label><label>Image de couverture (facultatif)<input type="file" name="cover" accept="image/jpeg,image/png,image/webp"></label><p><button class="btn">Enregistrer</button></p></form>`;
 $('#f').onsubmit=async e=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;
- try{const v={shop_name:f.shop_name.value.trim(),full_name:f.full_name.value.trim(),description:f.description.value.trim(),whatsapp:f.whatsapp.value.trim()||null,location:f.location.value.trim(),hours:f.hours.value.trim()};
+ try{const wa=normPhone(f.whatsapp.value);if(!wa)throw new Error(PHONE_ERR);
+  const v={shop_name:f.shop_name.value.trim(),full_name:f.full_name.value.trim(),description:f.description.value.trim(),whatsapp:wa,location:f.location.value.trim(),hours:f.hours.value.trim()};
   for(const [k,t] of [['logo','logo'],['cover','cover']]){const x=f[k].files[0];if(x){if(!ok(x))throw new Error('Image invalide : JPG, PNG ou WebP, 3 Mo maximum.');v[k+'_path']=await up(x,t)}}
   const {error}=await sb.from('seller_profiles').update(v).eq('id',u.id);if(error)throw error;toast('Boutique enregistrée')}
  catch(x){toast(x.message||'Enregistrement impossible',1)}b.disabled=false};

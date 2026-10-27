@@ -16,8 +16,11 @@ supabase/schema.sql
 ## 1. Configurer Supabase
 1. Créez un projet sur supabase.com.
 2. **SQL Editor** : collez tout `supabase/schema.sql`, puis *Run*. Cela crée tables, index, triggers, politiques RLS, le bucket `shop-media` (JPG/PNG/WebP, 3 Mo max) et la fonction sécurisée `place_order`.
+   **Base déjà créée avec une version précédente ?** N’exécutez pas `schema.sql` à nouveau : lancez dans l’ordre les scripts de `supabase/migrations/` (`001_…`, `002_…`), chacun une seule fois suffit.
 3. **Authentication > Providers** : Email activé. **Laissez « Confirm email » activé** : c’est ce qui garantit que seules les membres de la liste deviennent vendeuses.
-4. **Authentication > URL Configuration** : ajoutez l’URL locale puis l’URL de production.
+4. **Authentication > URL Configuration** : ajoutez l’URL locale puis l’URL de production dans *Redirect URLs*, avec `/**` à la fin (ex. `http://localhost:3000/**`, `https://votre-site.netlify.app/**`). Sans cela, le lien « Mot de passe oublié ? » ne ramène pas sur `connexion.html`.
+   **Authentication > Email Templates > Reset Password** : vous pouvez traduire l’e-mail en français (gardez `{{ .ConfirmationURL }}`).
+   **E-mails réels** : le service d’envoi intégré de Supabase est très limité (quelques e-mails par heure, et selon votre offre, uniquement vers les adresses de l’équipe du projet). Avant l’ouverture, configurez un SMTP dans **Project Settings > Authentication > SMTP Settings** (Brevo, Resend, Gmail…), sinon les e-mails de confirmation et de réinitialisation n’arriveront pas.
 5. **Project Settings > API** : copiez *Project URL* et la clé *anon public* dans `js/config.js`, ainsi que `CONTACT_WHATSAPP` (numéro de la page Contact). N’utilisez jamais la clé `service_role` dans ce projet.
 
 ## 2. Lancer en local
@@ -48,6 +51,8 @@ Site 100 % statique : Netlify, Vercel, Cloudflare Pages ou GitHub Pages (dépose
 - [ ] Inscription C1 : rôle `client`, accès à `client.html`, redirection refusée vers `dashboard.html` et `admin.html`.
 - [ ] Console navigateur : `sb.from('profiles').update({role:'admin'})` est refusé (trigger + RLS).
 - [ ] Console navigateur : `sb.from('profiles').update({email:'autre@mail.com'}).eq('id', monId)` est refusé (permission denied).
+- [ ] Inscription avec « 77 123 45 67 » : `profiles.phone` vaut `221771234567` ; une membre inscrite ainsi a ce numéro comme WhatsApp de boutique dès sa première connexion.
+- [ ] « Mot de passe oublié ? » : l’e-mail arrive, le lien ouvre le formulaire « Nouveau mot de passe », la connexion fonctionne ensuite avec le nouveau mot de passe ; un lien déjà utilisé affiche « lien expiré ».
 - [ ] A et B ajoutées aux membres par l’admin, inscrites avec cet e-mail et confirmées : boutiques actives à la connexion.
 - [ ] Un compte hors liste ne devient jamais vendeuse (essayer aussi `sb.rpc('claim_membership')` depuis la console).
 - [ ] A crée un produit : visible aussitôt au catalogue ; l’admin le désactive, A ne peut pas le réactiver.

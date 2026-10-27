@@ -5,6 +5,11 @@ export const ic = n => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">$
 export const PSEL = 'id,name,price_fcfa,is_available,seller_id,categories(name),seller_profiles(shop_name,logo_path),product_images(path,position)';
 export const $ = (s, r = document) => r.querySelector(s);
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// Numéro WhatsApp au format international sans + (ex. 221771234567), ou null s'il est invalide.
+// Un numéro local sénégalais (9 chiffres) reçoit l'indicatif 221 ; ailleurs, l'indicatif doit être saisi.
+export const PHONE_CC = '221';
+export const normPhone = s => { let d = String(s ?? '').replace(/\D/g, ''); if (d.startsWith('00')) d = d.slice(2); if (d.length === 9 && !d.startsWith('0')) d = PHONE_CC + d; return /^[1-9][0-9]{9,14}$/.test(d) ? d : null; };
+export const PHONE_ERR = 'Numéro WhatsApp invalide : ex. 77 123 45 67, ou avec l’indicatif pour l’étranger (+33 6…).';
 export const money = n => Number(n).toLocaleString('fr-FR') + ' FCFA';
 export const img = p => p ? sb.storage.from('shop-media').getPublicUrl(p).data.publicUrl : 'assets/placeholder.svg';
 export const firstImg = p => [...(p.product_images || [])].sort((a, b) => a.position - b.position)[0]?.path;

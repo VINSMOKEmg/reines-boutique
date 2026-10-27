@@ -5,17 +5,20 @@
 <link rel="stylesheet" href="css/style.css"></head><body>
 <div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
 
-<main class="w"><div class="auth f"><h1 style="font-size:36px">Créer un compte</h1><form id="f"><label>Nom complet<input name="n" required maxlength="80"></label><label>E-mail<input type="email" name="e" required></label><label>Mot de passe (8 caractères minimum)<input type="password" name="p" required minlength="8"></label>
+<main class="w"><div class="auth f"><h1 style="font-size:36px">Créer un compte</h1><form id="f"><label>Nom complet<input name="n" required maxlength="80"></label><label>E-mail<input type="email" name="e" required autocomplete="email"></label><label>Numéro WhatsApp<input type="tel" name="t" required autocomplete="tel" inputmode="tel" placeholder="77 123 45 67"></label><p class="mut" style="font-size:12px;margin:4px 0 0">Vendeuses : ce numéro devient celui de votre boutique, sur lequel les clientes vous écrivent. Hors Sénégal, ajoutez l’indicatif (ex. +33…).</p><label>Mot de passe (8 caractères minimum)<input type="password" name="p" required minlength="8"></label>
 <p><button class="btn" style="width:100%">Créer mon compte</button></p></form><p class="mut" style="font-size:12.5px">Vendeuse membre du groupe ? Créez votre compte avec l’e-mail enregistré par l’administration, confirmez-le, puis connectez-vous : votre espace vendeuse s’ouvre automatiquement.</p><p class="mut">Déjà inscrite ? <a class="lnk" href="connexion.html">Se connecter</a></p></div></main>
 <footer class="foot"><a class="brand" href="index.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><div class="fl"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7"/></svg>Livraison<br>selon la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l13-3v3"/></svg>Paiement<br>à la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Service client<br>via WhatsApp</span></div><div class="fc">© 2026 Les Reines de l’Entrepreneuriat. Tous droits réservés.</div></footer></div></div>
 <script type="module">
 import {sb,me,requireRole} from './js/supabase.js';
 import * as cart from './js/cart.js';
-import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
+import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini,normPhone,PHONE_ERR} from './js/ui.js';
 const user=await header();
 
-$('#f').onsubmit=async e=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;
- const {data,error}=await sb.auth.signUp({email:f.e.value.trim(),password:f.p.value,options:{data:{full_name:f.n.value.trim()}}});
+$('#f').onsubmit=async e=>{e.preventDefault();const f=e.target,b=f.querySelector('button');
+ const phone=normPhone(f.t.value);if(!phone){f.t.focus();return toast(PHONE_ERR,1)}
+ b.disabled=true;
+ // Le numéro est copié dans le profil par la base, puis devient le WhatsApp de la boutique si le compte est vendeuse.
+ const {data,error}=await sb.auth.signUp({email:f.e.value.trim(),password:f.p.value,options:{data:{full_name:f.n.value.trim(),phone}}});
  if(error){toast(error.message,1);b.disabled=false;return}
  if(data.session){await sb.rpc('claim_membership');const u=await me();const nx=new URLSearchParams(location.search).get('next');location.href=u?.role==='seller'?'profil-boutique.html':(/^[a-z\-]+\.html/.test(nx||'')?nx:'client.html')}
  else{toast('Compte créé. Confirmez votre e-mail, puis connectez-vous.');b.disabled=false}};

@@ -5,6 +5,7 @@ create type seller_status as enum ('pending','active','suspended');
 create table profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text, full_name text default '', role user_role not null default 'client',
+  phone text check (phone is null or phone ~ '^[0-9]{8,15}$'),  -- WhatsApp, format international sans +
   created_at timestamptz not null default now());
 create table seller_profiles (
   id uuid primary key references profiles(id) on delete cascade,
@@ -56,8 +57,11 @@ create function is_admin() returns boolean language sql stable security definer 
 $$ select exists(select 1 from profiles where id=auth.uid() and role='admin') $$;
 
 -- Création automatique du profil : le rôle est TOUJOURS 'client' à l'inscription.
+-- Le numéro saisi est nettoyé ; s'il est invalide il est ignoré (une erreur ici bloquerait l'inscription).
 create function handle_new_user() returns trigger language plpgsql security definer set search_path=public as $$
-begin insert into profiles(id,email,full_name,role) values(new.id,new.email,left(coalesce(new.raw_user_meta_data->>'full_name',''),80),'client'); return new; end $$;
+declare ph text:=regexp_replace(coalesce(new.raw_user_meta_data->>'phone',''),'\D','','g');
+begin insert into profiles(id,email,full_name,role,phone) values(new.id,new.email,left(coalesce(new.raw_user_meta_data->>'full_name',''),80),'client',
+  case when ph ~ '^[0-9]{8,15}$' then ph end); return new; end $$;
 create trigger on_auth_user_created after insert on auth.users for each row execute function handle_new_user();
 -- Garde profiles.email aligné sur l'e-mail réel quand celui-ci change.
 create function sync_profile_email() returns trigger language plpgsql security definer set search_path=public as $$
@@ -65,9 +69,11 @@ begin update profiles set email=new.email where id=new.id; return new; end $$;
 create trigger on_auth_user_email after update of email on auth.users for each row
   when (new.email is distinct from old.email) execute function sync_profile_email();
 
--- Quand un compte devient vendeuse, sa boutique (en attente) est créée.
+-- Quand un compte devient vendeuse, sa boutique est créée avec le numéro de l'inscription comme WhatsApp
+-- (une boutique existante garde son numéro s'il est déjà renseigné).
 create function on_role_change() returns trigger language plpgsql security definer set search_path=public as $$
-begin insert into seller_profiles(id,shop_name,full_name) values(new.id,'Ma boutique',new.full_name) on conflict do nothing; return new; end $$;
+begin insert into seller_profiles(id,shop_name,full_name,whatsapp) values(new.id,'Ma boutique',new.full_name,new.phone)
+  on conflict (id) do update set whatsapp=coalesce(seller_profiles.whatsapp,excluded.whatsapp); return new; end $$;
 create trigger profiles_role_seller after update of role on profiles for each row
   when (new.role='seller' and old.role is distinct from 'seller') execute function on_role_change();
 
@@ -142,8 +148,8 @@ alter table seller_orders enable row level security; alter table order_items ena
 
 create policy profiles_read on profiles for select using (id=auth.uid() or is_admin());
 create policy profiles_update on profiles for update using (id=auth.uid() or is_admin());
--- Seul le nom est modifiable depuis le site : l'e-mail est une copie d'auth.users et ne doit pas pouvoir être usurpé.
-revoke update on profiles from authenticated, anon; grant update(full_name) on profiles to authenticated;
+-- Seuls le nom et le téléphone sont modifiables depuis le site : l'e-mail est une copie d'auth.users et ne doit pas pouvoir être usurpé.
+revoke update on profiles from authenticated, anon; grant update(full_name,phone) on profiles to authenticated;
 
 create policy sellers_read on seller_profiles for select using (status='active' or id=auth.uid() or is_admin());
 create policy sellers_update on seller_profiles for update using (id=auth.uid() or is_admin());
