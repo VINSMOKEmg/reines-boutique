@@ -194,3 +194,6 @@ dialog h3{font-size:22px;margin-bottom:4px}
 .ft-bottom{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:18px 0 22px;font-size:12.5px;color:#bfa6a1}
 @media(max-width:900px){.ft-top{grid-template-columns:1fr 1fr;gap:28px}.ft-brand{grid-column:1/-1}.ft-trust{grid-template-columns:1fr}}
 @media(max-width:700px){.foot{padding:36px 18px 0}.ft-top{gap:22px 16px}.ft-bottom{flex-direction:column;text-align:center}}
+/* panier : précisions pour la vendeuse et aperçu du message WhatsApp */
+.cmd-info{margin:0 0 14px}.cmd-info h3{margin-bottom:4px}.cmd-info h3 small{font:400 13px Inter,system-ui,sans-serif}
+.wa-prev{margin-top:12px;font-size:13px}.wa-prev summary{cursor:pointer;color:var(--bd);font-weight:600}.wa-prev pre{white-space:pre-wrap;font:13px/1.55 Inter,system-ui,sans-serif;background:#e7f7ec;border-radius:10px;padding:12px 14px;margin:8px 0 0;max-width:460px}

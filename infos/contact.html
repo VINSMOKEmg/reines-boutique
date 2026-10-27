@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="fr"><head><meta charset="utf-8"><base href="../"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Contact — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body>
@@ -13,6 +13,7 @@ import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,f
 const user=await header();
 
 import {CONTACT_WHATSAPP} from './js/config.js';
-$('#wa').href='https://wa.me/'+String(CONTACT_WHATSAPP).replace(/\D/g,'');
+// Message de départ prérempli, pour que la conversation ne s'ouvre pas vide.
+$('#wa').href='https://wa.me/'+String(CONTACT_WHATSAPP).replace(/\D/g,'')+'?text='+encodeURIComponent('Bonjour, je vous écris depuis le site Les Reines de l’Entrepreneuriat. ');
 
 </script></body></html>
