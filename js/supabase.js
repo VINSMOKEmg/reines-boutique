@@ -1,5 +1,8 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
+// Lu avant createClient, qui efface ensuite les jetons de l'URL : arrivée par le lien « mot de passe oublié » ou lien expiré.
+const H = new URLSearchParams(location.hash.slice(1));
+export const AUTH_LINK = { recovery: H.get('type') === 'recovery', error: H.get('error_code') || H.get('error') || '' };
 export const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export async function me() {
