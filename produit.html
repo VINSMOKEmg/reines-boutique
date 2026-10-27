@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Produit — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.jpg">
+<link href="x" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css"></head><body>
+<div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
+<div class="bc" id="bc"></div><div class="pdw" id="pd"></div>
+<footer class="foot"><a class="brand" href="index.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><div class="fl"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7"/></svg>Livraison<br>selon la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l13-3v3"/></svg>Paiement<br>à la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Service client<br>via WhatsApp</span></div><div class="fc">© 2026 Les Reines de l’Entrepreneuriat. Tous droits réservés.</div></footer></div></div>
+<script type="module">
+import {sb,me,requireRole} from './js/supabase.js';
+import * as cart from './js/cart.js';
+import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
+const user=await header();
+
+const id=new URLSearchParams(location.search).get('id');
+const {data:p}=await sb.from('products').select('*,categories(name),seller_profiles(id,shop_name,logo_path,location),product_images(path,position)').eq('id',id).maybeSingle();
+if(!p){$('#pd').innerHTML='<p>Produit introuvable. <a class="lnk" href="catalogue.html">Retour à la boutique</a></p>';throw 0}
+const im=[...p.product_images].sort((a,b)=>a.position-b.position),S=p.seller_profiles,I=im.length?im:[{path:null}];let qty=1;
+$('#bc').innerHTML=`<a href="index.html">Accueil</a> › <a href="catalogue.html">Boutique</a> › ${p.categories?`<a href="catalogue.html?c=${p.category_id}">${esc(p.categories.name)}</a> › `:''}${esc(p.name)}`;
+$('#pd').innerHTML=`<div class="gal"><div class="thv">${I.map((i,k)=>`<img class="${k?'':'on'}" src="${img(i.path)}" alt="">`).join('')}</div><div class="ph big"><img id="big" src="${img(I[0].path)}" alt="${esc(p.name)}"><button type="button" class="heart ${favs().includes(p.id)?'on':''}" data-fav="${p.id}" aria-label="Favori">${ic('heart')}</button></div></div>
+<div class="info"><h1>${esc(p.name)}</h1><a class="sline" href="vendeuse.html?id=${S.id}">${mini(S)}<span>${esc(S.shop_name)}<br><small class="mut">${esc(S.location||'')}</small></span></a>
+<div class="price">${money(p.price_fcfa)}</div><p>${esc(p.description)}</p>
+${p.is_available?`<div class="qrow"><span>Quantité</span><div class="q"><button type="button" id="qm" aria-label="Moins">−</button><b id="qv">1</b><button type="button" id="qp" aria-label="Plus">+</button></div></div>
+<div class="act2"><button class="btn pk" id="buyb">Commander</button><button class="btn wa" id="addb">Ajouter au panier</button><a class="btn out" href="vendeuse.html?id=${S.id}">Voir la boutique</a></div>`:'<p><b>Produit indisponible</b></p><a class="btn out" href="vendeuse.html?id='+S.id+'">Voir la boutique</a>'}
+<ul><li>Catégorie : ${esc(p.categories?.name||'—')}</li><li>${p.is_available?'<span class="ok">En stock</span>':'Indisponible'}</li></ul></div>`;
+document.querySelectorAll('.thv img').forEach(t=>t.onclick=()=>{$('#big').src=t.src;document.querySelectorAll('.thv img').forEach(x=>x.classList.toggle('on',x===t))});
+if($('#qm')){const set=n=>{qty=Math.max(1,Math.min(99,n));$('#qv').textContent=qty};$('#qm').onclick=()=>set(qty-1);$('#qp').onclick=()=>set(qty+1);
+ $('#addb').onclick=()=>{cart.add(p.id,qty);toast('Produit ajouté au panier')};$('#buyb').onclick=async()=>{cart.add(p.id,qty);location.href=(await me())?'panier.html':'connexion.html?next=panier.html'}}
+
+</script></body></html>

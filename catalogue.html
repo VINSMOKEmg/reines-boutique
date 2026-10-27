@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catalogue — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css"></head><body>
+<div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
+<div class="blk">
+
+<div class="chips" id="niches"></div>
+<div class="sh"><h2 id="ct">Catalogue</h2></div><form class="filters" id="fl"><input name="q" placeholder="Rechercher…"><select name="c"><option value="">Toutes les catégories</option></select><button class="btn">Filtrer</button></form><div class="prods" id="prods"></div>
+</div>
+<footer class="foot"><a class="brand" href="index.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><div class="fl"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7"/></svg>Livraison<br>selon la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l13-3v3"/></svg>Paiement<br>à la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Service client<br>via WhatsApp</span></div><div class="fc">© 2026 Les Reines de l’Entrepreneuriat. Tous droits réservés.</div></footer></div></div>
+<script type="module">
+import {sb,me,requireRole} from './js/supabase.js';
+import * as cart from './js/cart.js';
+import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
+const user=await header();
+
+import {DEMO,demoCard} from './js/demo.js';import {DEMO_WHEN_EMPTY as DEMO_ON} from './js/config.js';
+const U=new URLSearchParams(location.search);
+const {data:cats}=await sb.from('categories').select('id,name,icon').order('name');
+const cur=U.get('c');
+$('#niches').innerHTML=`<a class="chip${cur?'':' on'}" href="catalogue.html">${ic('dots')}Tout</a>`+(cats||[]).map(x=>`<a class="chip${x.id===cur?' on':''}" href="catalogue.html?c=${x.id}">${ic(x.icon)}${esc(x.name)}</a>`).join('');
+$('#niches .on')?.scrollIntoView({block:'nearest',inline:'center'});
+const F=$('#fl');F.c.innerHTML+=(cats||[]).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');F.q.value=U.get('q')||'';F.c.value=U.get('c')||'';
+let q=sb.from('products').select(PSEL).eq('is_approved',true).order('created_at',{ascending:false});
+if(U.get('fav')){$('#ct').textContent='Mes favoris';const f=favs();if(!f.length){$('#prods').innerHTML='<p class="mut" style="grid-column:1/-1">Aucun favori pour le moment.</p>';throw 0}q=q.in('id',f)}
+if(F.c.value)q=q.eq('category_id',F.c.value);if(F.q.value)q=q.ilike('name','%'+F.q.value.replace(/[%,]/g,' ')+'%');
+const {data,error}=await q;if(error)toast('Impossible de charger le catalogue',1);
+// Catalogue encore vide (aucun filtre) : mêmes exemples que sur l'accueil.
+const demo=!(data&&data.length)&&DEMO_ON&&!F.c.value&&!F.q.value;
+$('#prods').innerHTML=demo?'<p class="note demo-note">Exemples de présentation : les créations des vendeuses arrivent bientôt.</p>'+DEMO.products.map(demoCard).join(''):(data||[]).map(card).join('')||'<p class="mut" style="grid-column:1/-1">Aucun produit ne correspond à votre recherche.</p>';
+
+</script></body></html>

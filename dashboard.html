@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css"></head><body>
+<div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
+<div class="shell"><aside id="side"></aside><main id="app" class="main"></main></div>
+<footer class="foot"><a class="brand" href="index.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><div class="fl"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7"/></svg>Livraison<br>selon la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l13-3v3"/></svg>Paiement<br>à la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Service client<br>via WhatsApp</span></div><div class="fc">© 2026 Les Reines de l’Entrepreneuriat. Tous droits réservés.</div></footer></div></div>
+<script type="module">
+import {sb,me,requireRole} from './js/supabase.js';
+import * as cart from './js/cart.js';
+import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
+await header();
+const S=await seller('dashboard.html'); if(!S) throw 0;
+const {u,shop}=S;
+
+const cnt=async f=>{let q=sb.from('products').select('id',{count:'exact',head:true}).eq('seller_id',u.id);return (await f(q)).count||0};
+const [n,ok,off,ord]=await Promise.all([cnt(q=>q),cnt(q=>q.eq('is_approved',true).eq('is_available',true)),cnt(q=>q.eq('is_available',false)),sb.from('seller_orders').select('ref,total,status,created_at,order_items(name,qty)').order('created_at',{ascending:false}).limit(20)]);
+$('#app').innerHTML=`<h1>Bonjour ${esc(u.full_name)}</h1><p class="mut">${esc(shop.shop_name)}</p><div class="kp"><div><b>${ok}</b>Produits publiés</div><div><b>${n}</b>Produits au total</div><div><b>${off}</b>Indisponibles</div></div>
+<p><a class="btn" href="ajouter-produit.html">Ajouter un produit</a> <a class="btn ghost" href="profil-boutique.html">Modifier ma boutique</a></p>
+<h2 id="commandes">Demandes de commande</h2><div class="tw"><table><tr><th>Référence</th><th>Articles</th><th>Total</th><th>Statut</th></tr>${(ord.data||[]).map(o=>`<tr><td>${esc(o.ref)}</td><td>${o.order_items.map(i=>`${esc(i.name)} × ${i.qty}`).join(', ')}</td><td>${money(o.total)}</td><td><select data-s="${o.ref}">${['nouvelle','confirmee','livree','annulee'].map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('')||'<tr><td colspan="4" class="mut">Aucune demande pour le moment.</td></tr>'}</table></div>`;
+document.querySelectorAll('[data-s]').forEach(s=>s.onchange=async()=>{const {error}=await sb.from('seller_orders').update({status:s.value}).eq('ref',s.dataset.s);toast(error?'Mise à jour impossible':'Statut mis à jour',!!error)});
+
+</script></body></html>

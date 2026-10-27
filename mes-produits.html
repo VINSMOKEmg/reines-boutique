@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mes produits — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css"></head><body>
+<div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
+<div class="shell"><aside id="side"></aside><main id="app" class="main"></main></div>
+<footer class="foot"><a class="brand" href="index.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><div class="fl"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7"/></svg>Livraison<br>selon la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l13-3v3"/></svg>Paiement<br>à la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Service client<br>via WhatsApp</span></div><div class="fc">© 2026 Les Reines de l’Entrepreneuriat. Tous droits réservés.</div></footer></div></div>
+<script type="module">
+import {sb,me,requireRole} from './js/supabase.js';
+import * as cart from './js/cart.js';
+import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
+await header();
+const S=await seller('mes-produits.html'); if(!S) throw 0;
+const {u,shop}=S;
+
+async function load(){const {data}=await sb.from('products').select('id,name,price_fcfa,is_available,is_approved,product_images(path)').eq('seller_id',u.id).order('created_at',{ascending:false});
+ $('#app').innerHTML=`<h1>Mes produits</h1><p><a class="btn" href="ajouter-produit.html">Ajouter un produit</a></p><div class="tw"><table>${(data||[]).map(p=>`<tr><td><img src="${img(p.product_images[0]?.path)}" width="56" height="56" style="object-fit:cover;border-radius:8px" alt=""></td><td><b>${esc(p.name)}</b><br>${money(p.price_fcfa)}</td>
+ <td><span class="badge ${p.is_approved?'ok':''}">${p.is_approved?'Publié':'Désactivé par l’administration'}</span> <span class="badge ${p.is_available?'ok':'no'}">${p.is_available?'Disponible':'Indisponible'}</span></td>
+ <td><a class="btn ghost sm" href="ajouter-produit.html?id=${p.id}">Modifier</a> <button class="btn ghost sm" data-t="${p.id}" data-v="${p.is_available}">${p.is_available?'Rendre indisponible':'Rendre disponible'}</button> <button class="btn ghost sm" data-d="${p.id}">Supprimer</button></td></tr>`).join('')||'<tr><td class="mut">Aucun produit pour le moment.</td></tr>'}</table></div>`;
+ document.querySelectorAll('[data-t]').forEach(b=>b.onclick=async()=>{await sb.from('products').update({is_available:b.dataset.v!=='true'}).eq('id',b.dataset.t);load()});
+ document.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer ce produit définitivement ?'))return;
+  const {data:im}=await sb.from('product_images').select('path').eq('product_id',b.dataset.d);if(im?.length)await sb.storage.from('shop-media').remove(im.map(i=>i.path));
+  const {error}=await sb.from('products').delete().eq('id',b.dataset.d);toast(error?'Suppression impossible (produit déjà commandé ? rendez-le indisponible)':'Produit supprimé',!!error);load()})}
+load();
+
+</script></body></html>

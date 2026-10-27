@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accueil — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css"></head><body>
+<div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
+
+<section class="hero"><div class="hc"><span class="eyebrow">Soutenons les femmes, achetons local</span><h1>Des femmes talentueuses, des produits uniques</h1><p>Mode, beauté, accessoires, déco et bien plus encore.<br>Découvrez des créations authentiques et faites avec passion.</p>
+<div class="hb"><a class="btn pk" href="catalogue.html">Découvrir la boutique →</a><a class="btn out" href="vendeuses.html">Voir nos vendeuses</a></div></div></section>
+<div class="strip" id="strip"></div>
+<section class="blk"><div class="sh"><h2>Nos catégories</h2><a class="lnk" href="catalogue.html#niches">Voir toutes →</a></div><div class="cats" id="cats"></div></section>
+<section class="blk"><div class="sh"><h2>Produits en vedette</h2><a class="lnk" href="catalogue.html">Voir tous →</a></div><div class="prods" id="prods"></div></section>
+<section class="vband" id="vendeuses"><div><span class="eyebrow">Nos vendeuses</span><h2>Des entrepreneuses passionnées</h2><p>Découvrez leurs histoires, leurs univers et soutenez leurs projets.</p><a class="btn pk" href="vendeuses.html">Voir toutes les vendeuses →</a></div><div class="vs" id="sellers"></div></section>
+<footer class="foot"><a class="brand" href="index.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><div class="fl"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7"/></svg>Livraison<br>selon la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l13-3v3"/></svg>Paiement<br>à la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Service client<br>via WhatsApp</span></div><div class="fc">© 2026 Les Reines de l’Entrepreneuriat. Tous droits réservés.</div></footer></div></div>
+<script type="module">
+import {sb,me,requireRole} from './js/supabase.js';
+import * as cart from './js/cart.js';
+import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
+
+await header();
+import {DEMO,demoCard} from './js/demo.js';import {DEMO_WHEN_EMPTY as DEMO_ON} from './js/config.js';
+$('#strip').innerHTML=[['shield','Produits authentiques','Faits avec passion'],['heart','Vendeuses vérifiées','Confiance & sécurité'],['truck','Livraison facile','Selon la vendeuse'],['wallet','Paiement à la vendeuse','Simple et direct']].map(x=>`<div><b>${ic(x[0])}</b><span>${x[1]}<small>${x[2]}</small></span></div>`).join('');
+const [c,p,s]=await Promise.all([sb.from('categories').select('id,name,icon').order('name'),sb.from('products').select(PSEL).eq('is_approved',true).order('created_at',{ascending:false}).limit(8),sb.from('seller_profiles').select('id,shop_name,logo_path,location').eq('status','active').limit(5)]);
+const C=(c.data&&c.data.length)?c.data:DEMO.cats,pref=['Mode & Prêt-à-porter','Beauté & Soins','Maison & Déco','Alimentation & Épicerie','Artisanat'];
+const top=pref.map(n=>C.find(x=>x.name===n)).filter(Boolean);const five=(top.length===5?top:C.slice(0,5));
+$('#cats').innerHTML=five.map(x=>`<a class="cat" href="catalogue.html${x.id?'?c='+x.id:''}"><b>${ic(x.icon)}</b>${esc(x.name)}</a>`).join('')+`<a class="cat" href="catalogue.html#niches"><b>${ic('dots')}</b>Autres</a>`;
+$('#prods').innerHTML=(p.data&&p.data.length?p.data.map(card).join(''):DEMO_ON?DEMO.products.map(demoCard).join(''):'')||'<p class="mut" style="grid-column:1/-1">Les premiers produits arrivent bientôt.</p>';
+const S=((s.data&&s.data.length)||!DEMO_ON)?(s.data||[]):DEMO.sellers;
+$('#sellers').innerHTML=S.map(x=>`<a class="v" href="${x.demo?'vendeuses.html':'vendeuse.html?id='+x.id}">${x.logo_path?`<img class="av" src="${img(x.logo_path)}" alt="">`:`<div class="av">${esc(x.shop_name[0])}</div>`}<b>${esc(x.shop_name)}</b><small>${esc(x.location||'')}</small></a>`).join('')||'<p class="mut">Les premières boutiques arrivent bientôt.</p>';
+
+</script></body></html>

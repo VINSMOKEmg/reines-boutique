@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Produit — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css"></head><body>
+<div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
+<div class="shell"><aside id="side"></aside><main id="app" class="main"></main></div>
+<footer class="foot"><a class="brand" href="index.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><div class="fl"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7"/></svg>Livraison<br>selon la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l13-3v3"/></svg>Paiement<br>à la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Service client<br>via WhatsApp</span></div><div class="fc">© 2026 Les Reines de l’Entrepreneuriat. Tous droits réservés.</div></footer></div></div>
+<script type="module">
+import {sb,me,requireRole} from './js/supabase.js';
+import * as cart from './js/cart.js';
+import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
+await header();
+const S=await seller('ajouter-produit.html'); if(!S) throw 0;
+const {u,shop}=S;
+
+const id=new URLSearchParams(location.search).get('id');let p=null,im=[];
+const {data:cats}=await sb.from('categories').select('id,name').order('name');
+if(id){const r=await sb.from('products').select('*,product_images(id,path,position)').eq('id',id).eq('seller_id',u.id).maybeSingle();p=r.data;if(!p){$('#app').innerHTML='<p>Produit introuvable.</p>';throw 0}im=p.product_images}
+$('#app').innerHTML=`<h1>${p?'Modifier':'Ajouter'} un produit</h1><div style="display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:24px"><form id="f" class="f"><label>Nom du produit<input name="name" required maxlength="120" value="${esc(p?.name||'')}"></label>
+<label>Description<textarea name="description" rows="4" maxlength="2000">${esc(p?.description||'')}</textarea></label><label>Prix (FCFA)<input type="number" name="price" required min="1" max="100000000" value="${p?.price_fcfa||''}"></label>
+<label>Catégorie<select name="cat" required><option value="">Choisir…</option>${(cats||[]).map(c=>`<option value="${c.id}" ${c.id===p?.category_id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>
+<label>Stock<input type="number" name="stock" min="0" value="${p?.stock??1}"></label><label><input type="checkbox" name="av" style="width:auto" ${p&&!p.is_available?'':'checked'}> Produit disponible</label>
+<label>Photos (JPG, PNG ou WebP, 3 Mo max chacune)<input type="file" name="ph" multiple accept="image/jpeg,image/png,image/webp"></label><div id="old">${im.map(i=>`<span style="position:relative"><img src="${img(i.path)}" width="64" height="64" style="object-fit:cover;border-radius:8px" alt=""><button type="button" class="btn ghost sm" data-r="${i.id}" data-p="${i.path}">×</button></span>`).join(' ')}</div>
+<p><button class="btn">Enregistrer</button></p><p class="mut">Votre produit est publié immédiatement dans le catalogue. L’administration peut le désactiver en cas de besoin.</p></form>
+<aside class="p" aria-label="Aperçu"><div class="ph"><img id="pi" src="${img(im[0]?.path)}" alt=""></div><div class="pb"><b id="pn">${esc(p?.name||'Nom du produit')}</b><div class="pr" id="pp">${p?money(p.price_fcfa):'0 FCFA'}</div></div></aside></div>`;
+const f=$('#f');f.name.oninput=()=>$('#pn').textContent=f.name.value||'Nom du produit';f.price.oninput=()=>$('#pp').textContent=money(f.price.value||0);
+f.ph.onchange=()=>{const x=f.ph.files[0];if(x)$('#pi').src=URL.createObjectURL(x)};
+document.querySelectorAll('[data-r]').forEach(b=>b.onclick=async()=>{await sb.storage.from('shop-media').remove([b.dataset.p]);await sb.from('product_images').delete().eq('id',b.dataset.r);b.parentElement.remove()});
+f.onsubmit=async e=>{e.preventDefault();const bt=f.querySelector('button[type=submit],button:not([type])');bt.disabled=true;
+ try{const files=[...f.ph.files];for(const x of files)if(!['image/jpeg','image/png','image/webp'].includes(x.type)||x.size>3*1024*1024)throw new Error('Image invalide : JPG, PNG ou WebP, 3 Mo maximum.');
+  // seller_id n'est pas envoyé : il est imposé par la base (auth.uid()) et vérifié par RLS.
+  const v={name:f.name.value.trim(),description:f.description.value.trim(),price_fcfa:Number(f.price.value),category_id:f.cat.value,stock:Number(f.stock.value),is_available:f.av.checked};
+  const r=p?await sb.from('products').update(v).eq('id',p.id).select('id').single():await sb.from('products').insert(v).select('id').single();if(r.error)throw r.error;
+  let pos=im.length;for(const x of files){const path=`${u.id}/${r.data.id}/${crypto.randomUUID()}.${x.type.split('/')[1]}`;const up=await sb.storage.from('shop-media').upload(path,x,{contentType:x.type});if(up.error)throw up.error;await sb.from('product_images').insert({product_id:r.data.id,path,position:pos++})}
+  toast('Produit enregistré');setTimeout(()=>location.href='mes-produits.html',800)}
+ catch(x){toast(x.message||'Enregistrement impossible. Votre boutique est-elle validée ?',1);bt.disabled=false}};
+
+</script></body></html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panier — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css"></head><body>
+<div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
+<main id="app" class="w"><h1 id="t">Mon panier</h1><div id="c"></div></main>
+<footer class="foot"><a class="brand" href="index.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><div class="fl"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7"/></svg>Livraison<br>selon la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l13-3v3"/></svg>Paiement<br>à la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Service client<br>via WhatsApp</span></div><div class="fc">© 2026 Les Reines de l’Entrepreneuriat. Tous droits réservés.</div></footer></div></div>
+<script type="module">
+import {sb,me,requireRole} from './js/supabase.js';
+import * as cart from './js/cart.js';
+import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
+const user=await header();
+
+let rows=[];
+async function load(){const k=cart.get();
+ if(!k.length){$('#c').innerHTML='<p>Votre panier est vide. <a class="lnk" href="catalogue.html">Voir le catalogue</a></p>';return}
+ const {data,error}=await sb.from('products').select(PSEL).in('id',k.map(i=>i.id));
+ if(error)return toast('Erreur de chargement du panier',1);
+ k.filter(i=>!data.some(p=>p.id===i.id)).forEach(i=>cart.setQty(i.id,0));
+ rows=k.map(i=>({...i,p:data.find(x=>x.id===i.id)})).filter(r=>r.p);draw()}
+function draw(){const t=rows.reduce((a,r)=>a+r.qty*r.p.price_fcfa,0);
+ $('#c').innerHTML=rows.map(r=>`<div class="line"><img src="${img(firstImg(r.p))}" alt=""><div class="g"><b>${esc(r.p.name)}</b><br><small class="mut">${esc(r.p.seller_profiles.shop_name)} · ${money(r.p.price_fcfa)}</small>${r.p.is_available?'':'<br><small style="color:#b42318">Indisponible : à retirer</small>'}</div>
+ <div class="q"><button data-q="${r.id}" data-d="-1" aria-label="Moins">−</button>${r.qty}<button data-q="${r.id}" data-d="1" aria-label="Plus">+</button></div><b>${money(r.qty*r.p.price_fcfa)}</b><button class="btn ghost sm" data-q="${r.id}" data-d="-99">Retirer</button></div>`).join('')
+ +`<div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 14px"><button class="btn ghost sm" id="vd">Vider le panier</button><div style="font-size:16px">Total (${rows.reduce((a,r)=>a+r.qty,0)} articles) <b style="font:700 24px 'Playfair Display',serif;margin-left:10px">${money(t)}</b></div></div><button class="btn pk" id="ok" style="width:100%;padding:14px">Valider ma commande</button>`;
+ $('#t').textContent='Mon panier ('+rows.reduce((a,r)=>a+r.qty,0)+')';$('#vd').onclick=()=>{cart.clear();load()};$('#ok').onclick=validate}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(!b)return;const r=rows.find(x=>x.id===b.dataset.q);cart.setQty(r.id,r.qty+Number(b.dataset.d));load()});
+async function validate(){
+ if(!(await me())){location.href='connexion.html?next=panier.html';return}
+ if(rows.some(r=>!r.p.is_available))return toast('Retirez les produits indisponibles avant de valider.',1);
+ const b=$('#ok');b.disabled=true;
+ // Les prix sont recalculés côté serveur par la fonction place_order.
+ const {data,error}=await sb.rpc('place_order',{items:rows.map(r=>({product_id:r.id,qty:r.qty}))});
+ if(error){toast(error.message,1);b.disabled=false;return}
+ cart.clear();done(data)}
+function done(o){$('#c').innerHTML=`<h2>Choisissez vos vendeuses</h2><div class="note">Le message WhatsApp est prérempli : vous devez l’envoyer vous-même. Chaque vendeuse confirmera ensuite la disponibilité et la livraison avec vous.</div>`
+ +o.map(x=>`<div class="box"><h3>${esc(x.shop_name)}</h3><ul>${x.items.map(i=>`<li>${esc(i.name)} : ${i.qty} × ${money(i.price)}</li>`).join('')}</ul><p>Total : <b>${money(x.total)}</b> · Référence ${esc(x.ref)}</p>
+ ${x.whatsapp?`<a class="btn wapp" target="_blank" rel="noopener" href="${cart.waLink(x.whatsapp,cart.waMessage(x))}">Contacter ${esc(x.shop_name)} sur WhatsApp</a>`:'<p class="mut">Cette vendeuse n’a pas encore renseigné son numéro WhatsApp.</p>'}</div>`).join('')}
+load();
+
+</script></body></html>
