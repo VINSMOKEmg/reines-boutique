@@ -2,49 +2,247 @@
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Administration — Les Reines de l’Entrepreneuriat</title><link rel="icon" href="assets/logo.jpg">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css"></head><body>
-<div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
-<div class="shell"><aside id="side"></aside><main id="app" class="main"></main></div>
-<footer class="foot"><a class="brand" href="index.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><div class="fl"><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7"/></svg>Livraison<br>selon la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l13-3v3"/></svg>Paiement<br>à la vendeuse</span><span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>Service client<br>via WhatsApp</span></div><div class="fc">© 2026 Les Reines de l’Entrepreneuriat. Tous droits réservés.</div></footer></div></div>
+<link rel="stylesheet" href="css/style.css"></head><body class="app">
+<div class="app-shell">
+ <aside class="app-side">
+  <a class="app-brand" href="admin.html"><img src="assets/logo.jpg" alt=""><span><b>Les Reines</b><small>Administration</small></span></a>
+  <nav id="nav" aria-label="Administration"></nav>
+  <div class="app-side-foot">
+   <a href="index.html" target="_blank" title="Voir le site"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg><span class="lbl">Voir le site</span></a>
+   <div class="app-user" id="me"></div>
+   <button type="button" id="lo" title="Déconnexion"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span class="lbl">Déconnexion</span></button>
+  </div>
+ </aside>
+ <main class="app-main">
+  <header class="app-top"><div><span class="eyebrow">Espace administrateur</span><h1 id="pt">Tableau de bord</h1><p id="ps"></p></div><div class="app-actions" id="pa"></div></header>
+  <div id="app"></div>
+ </main>
+</div>
+<dialog id="dl"><form class="f" id="df"></form></dialog>
 <script type="module">
-import {sb,me,requireRole} from './js/supabase.js';
-import * as cart from './js/cart.js';
-import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini,normPhone,PHONE_ERR} from './js/ui.js';
-const user=await header();
-
+import {sb,requireRole} from './js/supabase.js';
+import {$,esc,money,img,toast,logout,ic,ICONS,normPhone,PHONE_ERR,statusSelect} from './js/ui.js';
 const a=await requireRole(['admin']);if(!a)throw 0;
-$('#side').innerHTML='<h4>Espace Administrateur</h4><a class="on" href="#">Tableau de bord</a><a href="#ml">Membres</a><a href="#sl">Vendeuses</a><a href="#pl">Produits</a><a href="#cl">Catégories</a>';
-const cn=async t=>(await sb.from(t).select('id',{count:'exact',head:true})).count||0;
-const [ns,np,no]=await Promise.all([cn('seller_profiles'),cn('products'),cn('orders')]);
-$('#app').innerHTML=`<span class="eyebrow">Espace administrateur</span><h1 style="font-size:40px">Administration</h1><p><button class="btn ghost sm" id="lo">Déconnexion</button></p><div class="kp"><div><b>${ns}</b>Vendeuses</div><div><b>${np}</b>Produits</div><div><b>${no}</b>Commandes</div></div>
 
-<h2>Membres du groupe</h2><form id="pr" style="display:flex;gap:8px;flex-wrap:wrap"><input name="n" placeholder="Nom" style="padding:11px;border:1px solid var(--line);border-radius:6px"><input type="email" name="e" required placeholder="E-mail de la membre" style="padding:11px;border:1px solid var(--line);border-radius:6px;min-width:260px"><button class="btn">Ajouter</button></form><div class="tw" id="ml" style="margin-top:14px"></div>
-<h2 style="margin-top:32px">Vendeuses</h2><div class="tw" id="sl"></div><h2 style="margin-top:32px">Produits</h2><div class="tw" id="pl"></div><h2 style="margin-top:32px">Niches (catégories)</h2><div id="cl"></div>
-<dialog id="dl"><form class="f" id="df"></form></dialog>`;$('#lo').onclick=logout;
-const ik=Object.keys(ICONS);
-function edit(title,fields,save){const d=$('#dl');$('#df').innerHTML=`<h3>${title}</h3>`+fields.map(x=>`<label>${x.l}${x.t==='area'?`<textarea name="${x.k}" rows="3">${esc(x.v||'')}</textarea>`:`<input name="${x.k}" type="${x.t||'text'}" value="${esc(x.v??'')}">`}</label>`).join('')+'<p style="display:flex;gap:8px"><button class="btn">Enregistrer</button><button type="button" class="btn ghost" id="cx">Annuler</button></p>';
- $('#cx').onclick=()=>d.close();$('#df').onsubmit=async e=>{e.preventDefault();const fd=Object.fromEntries(new FormData(e.target));try{await save(fd,e.target);d.close();toast('Modifications enregistrées');load()}catch(x){toast(x.message||'Échec',1)}};d.showModal()}
-$('#pr').onsubmit=async e=>{e.preventDefault();const f=e.target;const {error}=await sb.from('member_whitelist').insert({email:f.e.value.trim().toLowerCase(),full_name:f.n.value.trim()||null});toast(error?(error.code==='23505'?'Déjà dans la liste':error.message):'Membre ajoutée',!!error);if(!error){f.reset();load()}};
+const CAT_ICONS=Object.keys(ICONS).slice(0,16);  // les 16 premières icônes sont celles des niches
+const IMG_OK=f=>['image/jpeg','image/png','image/webp'].includes(f.type)&&f.size<=3*1024*1024;
+const day=d=>new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});
+const wa=n=>n?`<a class="lnk" href="https://wa.me/${esc(n)}" target="_blank" rel="noopener">+${esc(n)}</a>`:'<span class="mut">pas de numéro</span>';
+const pl=(n,s,p=s+'s')=>n>1?p:s;
+const logo=x=>x.logo_path?`<img class="th" src="${img(x.logo_path)}" alt="">`:`<span class="th av">${esc(x.shop_name[0])}</span>`;
+const empty=(i,t,p,cta='',cl='')=>`<div class="empty ${cl}"><span class="empty-ic">${ic(i)}</span><b>${t}</b><p>${p}</p>${cta}</div>`;
+const btn=(act,id,label,cls='btn ghost sm',extra='')=>`<button type="button" class="${cls}" data-act="${act}" data-id="${id}"${extra}>${label}</button>`;
+
+// ---------- Navigation : une page par section (ancre #commandes…) ----------
+const TABS={
+ accueil:['Tableau de bord','home',`Bonjour ${esc((a.full_name||'').split(' ')[0])}, voici l’état de la boutique collective.`],
+ commandes:['Commandes','cart','Les demandes validées par les clientes, une ligne par vendeuse. La suite se passe sur WhatsApp.'],
+ vendeuses:['Vendeuses','store','Les boutiques des membres. Une boutique suspendue disparaît du site avec tous ses produits.'],
+ membres:['Membres du groupe','user','Seules les membres de cette liste peuvent ouvrir une boutique. Elles sont reconnues par leur numéro WhatsApp.'],
+ produits:['Produits','box','Tous les produits publiés par les vendeuses.'],
+ niches:['Niches','gem','Les catégories proposées aux vendeuses et affichées dans la boutique.']};
+const ACTIONS={
+ accueil:`<a class="btn ghost" href="index.html" target="_blank">${ic('ext')}Voir le site</a>`,
+ vendeuses:`<a class="btn" href="#membres">${ic('plus')}Ajouter une membre</a>`,
+ membres:`<button type="button" class="btn" data-act="focus" data-id="#pr [name=t]">${ic('plus')}Ajouter une membre</button>`,
+ niches:`<button type="button" class="btn" data-act="focus" data-id="#cf [name=n]">${ic('plus')}Nouvelle niche</button>`};
+$('#nav').innerHTML=Object.entries(TABS).map(([k,[l,i]])=>`<a href="#${k}" data-tab="${k}">${ic(i)}<span>${l}</span><i class="nb" id="nb-${k}" hidden></i></a>`).join('');
+$('#me').innerHTML=`<span class="av">${esc((a.full_name||a.email||'A')[0].toUpperCase())}</span><span><b>${esc(a.full_name||'Administratrice')}</b><small>${esc(a.email||'')}</small></span>`;
+$('#lo').onclick=logout;
+
+$('#app').innerHTML=`
+<section data-tab="accueil"><div class="kpis" id="kp"></div><div id="start"></div>
+ <div class="grid2"><div class="panel"><div class="panel-h"><h2>À traiter</h2></div><div id="todo"></div></div>
+  <div class="panel"><div class="panel-h"><h2>Boutiques</h2><a class="lnk" href="#vendeuses">Tout voir →</a></div><div id="tops"></div></div></div>
+ <div class="panel flush"><div class="panel-h"><h2>Dernières commandes</h2><a class="lnk" href="#commandes">Toutes les commandes →</a></div><div id="ol5"></div></div></section>
+<section data-tab="commandes" hidden><div class="toolbar"><div class="filters-row" id="of"></div></div><div class="panel flush" id="ol"></div></section>
+<section data-tab="vendeuses" hidden><div id="sl"></div></section>
+<section data-tab="membres" hidden>
+ <div class="panel"><div class="panel-h"><h2>Ajouter une membre</h2></div>
+  <ol class="howto"><li>Ajoutez ici son <b>numéro WhatsApp</b>.</li><li>Elle crée son compte sur le site avec <b>ce même numéro</b>.</li><li>Elle apparaît « À valider » : vérifiez que c’est bien elle, puis cliquez sur <b>Activer</b>. Sa boutique s’ouvre avec ce numéro.</li></ol>
+  <form id="pr" class="row"><input name="n" placeholder="Nom" maxlength="80" aria-label="Nom"><input type="tel" name="t" required placeholder="Numéro WhatsApp (ex. 77 123 45 67)" aria-label="Numéro WhatsApp"><input type="email" name="e" placeholder="E-mail (facultatif)" aria-label="E-mail (facultatif)"><button class="btn">${ic('plus')}Ajouter</button></form></div>
+ <div class="panel flush"><div class="panel-h"><h2>Membres</h2><span class="mut" id="mc"></span></div><div id="ml"></div></div></section>
+<section data-tab="produits" hidden><div class="toolbar"><input type="search" id="pq" placeholder="Rechercher un produit ou une boutique…" aria-label="Rechercher"><div class="filters-row" id="pf"></div></div><div class="panel flush" id="pl"></div></section>
+<section data-tab="niches" hidden><div class="tiles" id="cl"></div>
+ <div class="panel" style="margin-top:18px"><div class="panel-h"><h2>Nouvelle niche</h2></div><form id="cf"><p class="mut" style="margin:0 0 10px;font-size:13.5px">Choisissez une icône, puis un nom.</p>
+  <div class="icp" role="radiogroup" aria-label="Icône">${CAT_ICONS.map((k,i)=>`<label title="${k}"><input type="radio" name="i" value="${k}"${i?'':' checked'}><span>${ic(k)}</span></label>`).join('')}</div>
+  <div class="row"><input name="n" required maxlength="60" placeholder="Nom de la niche" aria-label="Nom de la niche"><button class="btn">${ic('plus')}Ajouter la niche</button></div></form></div></section>`;
+
+function show(){
+ const t=TABS[location.hash.slice(1)]?location.hash.slice(1):'accueil',[l,,sub]=TABS[t];
+ $('#pt').textContent=l;$('#ps').innerHTML=sub;$('#pa').innerHTML=ACTIONS[t]||'';document.title=l+' — Administration';
+ document.querySelectorAll('#app>section').forEach(s=>s.hidden=s.dataset.tab!==t);
+ document.querySelectorAll('#nav a').forEach(x=>x.classList.toggle('on',x.dataset.tab===t));
+ document.querySelector('#nav .on')?.scrollIntoView({block:'nearest',inline:'center'});window.scrollTo(0,0)}
+window.addEventListener('hashchange',show);show();
+
+// ---------- Outils ----------
+// Fenêtre d'édition. Champs : {k, l, t: text|tel|number|area|file|select, v, o: [[valeur, libellé]]}.
+function edit(title,fields,save){
+ const d=$('#dl'),f=$('#df');
+ f.innerHTML=`<h3>${title}</h3>`+fields.map(x=>`<label>${x.l}${
+  x.t==='area'?`<textarea name="${x.k}" rows="3">${esc(x.v||'')}</textarea>`:
+  x.t==='select'?`<select name="${x.k}"><option value="">—</option>${x.o.map(([v,l])=>`<option value="${esc(v)}"${v===x.v?' selected':''}>${esc(l)}</option>`).join('')}</select>`:
+  `<input name="${x.k}" type="${x.t||'text'}" value="${esc(x.v??'')}"${x.t==='file'?' accept="image/jpeg,image/png,image/webp"':''}>`}</label>`).join('')
+  +'<p class="row" style="margin-top:18px"><button class="btn">Enregistrer</button><button type="button" class="btn ghost" id="cx">Annuler</button></p>';
+ $('#cx').onclick=()=>d.close();
+ f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('button.btn');b.disabled=true;
+  try{await save(Object.fromEntries(new FormData(f)),f);d.close();toast('Modifications enregistrées');load()}
+  catch(x){toast(x.message||'Échec de l’enregistrement',1);b.disabled=false}};
+ d.showModal()}
+async function run(q,ok){const {error}=await q;toast(error?error.message:ok,!!error);load()}
+
+// ---------- Données ----------
+let D={},OF='all',PF='all';
 async function load(){
- const [mw,rg]=await Promise.all([sb.from('member_whitelist').select('*').order('created_at',{ascending:false}),sb.from('profiles').select('id,email').eq('role','seller')]);const MW=mw.data||[],RG=rg.data||[];
- $('#ml').innerHTML='<table><tr><th>Membre</th><th>Inscription</th><th></th></tr>'+(MW.map(x=>{const r=RG.find(y=>(y.email||'').toLowerCase()===x.email);return `<tr><td><b>${esc(x.full_name||'')}</b><br><small class="mut">${esc(x.email)}</small></td><td><span class="badge ${r?'ok':''}">${r?'Boutique créée':'Pas encore inscrite'}</span></td><td><button class="btn ghost sm" data-rm="${x.id}">Retirer</button></td></tr>`}).join('')||'<tr><td colspan="3" class="mut">Aucune membre pour le moment.</td></tr>')+'</table>';
- const [s,p,c]=await Promise.all([sb.from('seller_profiles').select('*').order('created_at'),sb.from('products').select('id,name,description,price_fcfa,is_approved,seller_profiles(shop_name),product_images(path)').order('created_at',{ascending:false}).limit(80),sb.from('categories').select('id,name,icon').order('name')]);
- const S=s.data||[],P=p.data||[];
- $('#sl').innerHTML='<table><tr><th>Boutique</th><th>Statut</th><th>Actions</th></tr>'+S.map(x=>`<tr><td><b>${esc(x.shop_name)}</b><br><small class="mut">${esc(x.whatsapp||'pas de WhatsApp')}</small></td><td><span class="badge ${x.status==='active'?'ok':'no'}">${x.status==='active'?'Active':'Suspendue'}</span></td>
- <td><button class="btn ghost sm" data-es="${x.id}">Modifier</button> <button class="btn ghost sm" data-st="${x.status==='active'?'suspended':'active'}" data-id="${x.id}">${x.status==='active'?'Suspendre':'Réactiver'}</button></td></tr>`).join('')+'</table>';
- $('#pl').innerHTML='<table><tr><th>Produit</th><th>État</th><th>Actions</th></tr>'+P.map(x=>`<tr><td><b>${esc(x.name)}</b><br><small class="mut">${esc(x.seller_profiles?.shop_name)} · ${money(x.price_fcfa)}</small></td><td><span class="badge ${x.is_approved?'ok':'no'}">${x.is_approved?'Publié':'Désactivé'}</span></td>
- <td><button class="btn ghost sm" data-ep="${x.id}">Modifier</button> <button class="btn ghost sm" data-ap="${x.id}" data-v="${x.is_approved}">${x.is_approved?'Désactiver':'Réactiver'}</button> <button class="btn ghost sm" data-dp="${x.id}">Supprimer</button></td></tr>`).join('')+'</table>';
- $('#cl').innerHTML=(c.data||[]).map(x=>`<span class="badge" style="display:inline-flex;gap:6px;align-items:center;margin:0 6px 6px 0">${ic(x.icon)}${esc(x.name)} <a href="#" data-dc="${x.id}">×</a></span>`).join('')+`<form id="cf" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><select name="i" style="padding:10px">${ik.slice(0,16).map(k=>`<option>${k}</option>`).join('')}</select><input name="n" required placeholder="Nouvelle niche" style="padding:10px;border:1px solid var(--line);border-radius:6px"><button class="btn sm">Ajouter</button></form>`;
- $('#cf').onsubmit=async e=>{e.preventDefault();const {error}=await sb.from('categories').insert({name:e.target.n.value.trim(),icon:e.target.i.value});toast(error?error.message:'Niche ajoutée',!!error);load()};
- document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{if(!confirm('Retirer cette membre ? Sa boutique sera suspendue.'))return;const m=MW.find(y=>y.id===b.dataset.rm);const r=RG.find(y=>(y.email||'').toLowerCase()===m.email);if(r)await sb.from('seller_profiles').update({status:'suspended'}).eq('id',r.id);await sb.from('member_whitelist').delete().eq('id',m.id);load()});
- document.querySelectorAll('[data-es]').forEach(b=>b.onclick=()=>{const x=S.find(y=>y.id===b.dataset.es);edit('Modifier la boutique',[{k:'shop_name',l:'Nom de la boutique',v:x.shop_name},{k:'whatsapp',l:'WhatsApp (ex. 221770000000)',v:x.whatsapp},{k:'location',l:'Localisation',v:x.location},{k:'description',l:'Description',t:'area',v:x.description},{k:'logo',l:'Nouveau logo',t:'file'}],async(v,f)=>{const wa=v.whatsapp.trim()?normPhone(v.whatsapp):null;if(v.whatsapp.trim()&&!wa)throw new Error(PHONE_ERR);const o={shop_name:v.shop_name.trim(),whatsapp:wa,location:v.location.trim(),description:v.description.trim()};const fl=f.logo.files[0];
-  if(fl){if(!['image/jpeg','image/png','image/webp'].includes(fl.type)||fl.size>3145728)throw new Error('Image invalide (JPG, PNG, WebP, 3 Mo max)');const path=`${x.id}/logo-${Date.now()}.${fl.type.split('/')[1]}`;const u=await sb.storage.from('shop-media').upload(path,fl,{contentType:fl.type});if(u.error)throw u.error;o.logo_path=path}
-  const {error}=await sb.from('seller_profiles').update(o).eq('id',x.id);if(error)throw error})});
- document.querySelectorAll('[data-ep]').forEach(b=>b.onclick=()=>{const x=P.find(y=>y.id===b.dataset.ep);edit('Modifier le produit',[{k:'name',l:'Nom',v:x.name},{k:'price',l:'Prix (FCFA)',t:'number',v:x.price_fcfa},{k:'description',l:'Description',t:'area',v:x.description}],async v=>{const {error}=await sb.from('products').update({name:v.name.trim(),price_fcfa:Number(v.price),description:v.description.trim()}).eq('id',x.id);if(error)throw error})});
- document.querySelectorAll('[data-st]').forEach(b=>b.onclick=async()=>{await sb.from('seller_profiles').update({status:b.dataset.st}).eq('id',b.dataset.id);load()});
- document.querySelectorAll('[data-ap]').forEach(b=>b.onclick=async()=>{await sb.from('products').update({is_approved:b.dataset.v!=='true'}).eq('id',b.dataset.ap);load()});
- document.querySelectorAll('[data-dp]').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer ce produit définitivement ?'))return;const {error}=await sb.from('products').delete().eq('id',b.dataset.dp);toast(error?'Suppression impossible (produit déjà commandé : désactivez-le)':'Produit supprimé',!!error);load()});
- document.querySelectorAll('[data-dc]').forEach(b=>b.onclick=async e=>{e.preventDefault();const {error}=await sb.from('categories').delete().eq('id',b.dataset.dc);toast(error?'Niche utilisée : suppression impossible':'Niche supprimée',!!error);load()})}
-load();
+ const [mw,s,p,c,o]=await Promise.all([
+  sb.from('member_whitelist').select('*').order('created_at',{ascending:false}),
+  sb.from('seller_profiles').select('*').order('created_at'),
+  sb.from('products').select('id,name,description,price_fcfa,is_approved,is_available,category_id,seller_id,created_at,seller_profiles(shop_name),product_images(path,position)').order('created_at',{ascending:false}).limit(500),
+  sb.from('categories').select('id,name,icon').order('name'),
+  sb.from('seller_orders').select('id,ref,total,status,created_at,seller_id,seller_profiles(shop_name),orders(profiles(full_name,phone,email)),order_items(name,qty)').order('created_at',{ascending:false}).limit(200)]);
+ for(const r of [mw,s,p,c,o])if(r.error)toast('Chargement incomplet : '+r.error.message,1);
+ const MW=mw.data||[],S=s.data||[],phones=MW.map(x=>x.phone).filter(Boolean),emails=MW.map(x=>x.email).filter(Boolean);
+ // Comptes utiles : propriétaires des boutiques et comptes portant le numéro ou l'e-mail d'une membre.
+ const PS='id,email,phone,full_name,role,created_at',pq=await Promise.all([S.length&&sb.from('profiles').select(PS).in('id',S.map(x=>x.id)),
+  phones.length&&sb.from('profiles').select(PS).in('phone',phones),emails.length&&sb.from('profiles').select(PS).in('email',emails)]);
+ const PR=[...new Map(pq.flatMap(r=>r?.data||[]).map(x=>[x.id,x])).values()];
+ D={MW,PR,S,P:p.data||[],C:c.data||[],O:o.data||[]};
+ overview();ordersView();shopsView();membersView();productsView();nichesView()}
 
+// ---------- Membres : correspondance liste <-> comptes ----------
+// Comptes liés à une membre : même numéro, ou même e-mail.
+const accountsOf=w=>D.PR.filter(p=>(w.phone&&p.phone===w.phone)||(w.email&&p.email===w.email));
+const isMember=p=>!!p&&D.MW.some(w=>(w.phone&&w.phone===p.phone)||(w.email&&w.email===p.email));
+// État d'une membre : none (pas inscrite) | pending (inscrite, à valider) | active | suspended.
+function stateOf(w){const acc=accountsOf(w),sh=D.S.filter(s=>acc.some(p=>p.id===s.id));
+ return {acc,sh,st:sh.some(s=>s.status==='active')?'active':sh.length?'suspended':acc.length?'pending':'none'}}
+
+// ---------- Tableau de bord ----------
+function overview(){const {MW,PR,S,P,C,O}=D,ST_=MW.map(stateOf);
+ const nNew=O.filter(x=>x.status==='nouvelle').length,nAct=S.filter(x=>x.status==='active').length,nPub=P.filter(x=>x.is_approved).length,
+  nWait=ST_.filter(x=>x.st==='none').length,nPend=ST_.filter(x=>x.st==='pending').length,nNoWa=S.filter(x=>x.status==='active'&&!x.whatsapp).length,nSus=S.length-nAct,nOff=P.length-nPub;
+ $('#kp').innerHTML=[['cart',nNew,pl(nNew,'Commande nouvelle','Commandes nouvelles'),'commandes',nNew],['store',nAct,pl(nAct,'Boutique active','Boutiques actives'),'vendeuses'],
+  ['user',MW.length,pl(MW.length,'Membre du groupe','Membres du groupe'),'membres'],['box',nPub,pl(nPub,'Produit publié','Produits publiés'),'produits']]
+  .map(([i,n,l,k,al])=>`<a class="kpi${al?' alert':''}" href="#${k}"><span class="kpi-ic">${ic(i)}</span><span><b>${n}</b>${l}</span></a>`).join('');
+ // Premiers pas, tant que la boutique n'a pas tourné une première fois.
+ const ST=[[C.length>0,'Créer les niches (catégories)','niches'],[MW.length>0,'Ajouter les numéros des membres du groupe','membres'],[S.length>0,'Une première membre s’inscrit et ouvre sa boutique','membres'],
+  [nPub>0,'Premier produit publié par une vendeuse','produits'],[O.length>0,'Première commande d’une cliente','commandes']],done=ST.filter(x=>x[0]).length,next=ST.findIndex(x=>!x[0]);
+ $('#start').innerHTML=done===ST.length?'':`<div class="panel start"><div class="panel-h"><h2>Premiers pas</h2><span class="mut">${done} / ${ST.length} étapes</span></div><div class="bar"><i style="width:${done/ST.length*100}%"></i></div>
+  <ol class="steps">${ST.map(([ok,l,k],i)=>`<li class="${ok?'done':i===next?'next':''}"><a href="#${k}"><span class="ck">${ok?ic('check'):''}</span><span class="lbl">${l}</span>${i===next?'<span class="lnk">Commencer →</span>':''}</a></li>`).join('')}</ol></div>`;
+ const T=[[nPend,`${pl(nPend,'membre inscrite','membres inscrites')} à valider : vérifiez puis activez ${pl(nPend,'sa boutique','leurs boutiques')}`,'membres'],[nNew,`${pl(nNew,'commande nouvelle','commandes nouvelles')} à suivre`,'commandes'],[nNoWa,`${pl(nNoWa,'boutique active','boutiques actives')} sans WhatsApp : les clientes ne peuvent pas commander`,'vendeuses'],
+  [nWait,`${pl(nWait,'membre','membres')} pas encore ${pl(nWait,'inscrite','inscrites')} sur le site`,'membres'],[nSus,`${pl(nSus,'boutique suspendue','boutiques suspendues')}`,'vendeuses'],[nOff,`${pl(nOff,'produit désactivé','produits désactivés')}`,'produits']].filter(t=>t[0]);
+ $('#todo').innerHTML=T.length?'<ul class="todo">'+T.map(([n,l,k])=>`<li><a href="#${k}"><b>${n}</b><span>${l}</span><span class="lnk">Voir →</span></a></li>`).join('')+'</ul>'
+  :`<p class="ok-line"><span class="ck">${ic('check')}</span>Tout est à jour, rien à traiter.</p>`;
+ const top=[...S].sort((x,y)=>P.filter(p=>p.seller_id===y.id).length-P.filter(p=>p.seller_id===x.id).length).slice(0,5);
+ $('#tops').innerHTML=top.length?top.map(x=>{const n=P.filter(p=>p.seller_id===x.id).length;return `<a class="mini-row" href="vendeuse.html?id=${x.id}" target="_blank">${logo(x)}<span><b>${esc(x.shop_name)}</b><small>${esc(x.location||'')}</small></span><em>${n} ${pl(n,'produit')}</em></a>`}).join('')
+  :empty('store','Aucune boutique','Les boutiques apparaissent quand les membres se connectent.','<a class="btn sm" href="#membres">Ajouter une membre</a>','sm');
+ const nb=(k,n)=>{const el=$('#nb-'+k);el.textContent=n;el.hidden=!n};nb('commandes',nNew);nb('vendeuses',nNoWa);nb('membres',nPend)}
+
+// ---------- Commandes ----------
+function orderTable(L){
+ return '<div class="tw"><table><tr><th>Référence</th><th>Cliente</th><th>Boutique</th><th>Articles</th><th>Total</th><th>Statut</th></tr>'+L.map(x=>{const cl=x.orders?.profiles;
+  return `<tr><td><b>${esc(x.ref)}</b><br><small class="mut">${day(x.created_at)}</small></td><td>${esc(cl?.full_name||cl?.email||'—')}<br><small>${wa(cl?.phone)}</small></td><td>${esc(x.seller_profiles?.shop_name)}</td>
+  <td><small>${x.order_items.map(i=>`${esc(i.name)} × ${i.qty}`).join('<br>')}</small></td><td><b>${money(x.total)}</b></td><td>${statusSelect(x.status,`data-os="${x.id}"`)}</td></tr>`}).join('')+'</table></div>'}
+const NO_ORDER=cl=>empty('cart','Aucune commande pour le moment','Les commandes apparaissent ici dès qu’une cliente valide son panier.','',cl);
+function ordersView(){const {O}=D,F=[['all','Toutes'],['nouvelle','Nouvelles'],['confirmee','Confirmées'],['livree','Livrées'],['annulee','Annulées']];
+ $('#of').innerHTML=F.map(([k,l])=>`<button type="button" class="chip${OF===k?' on':''}" data-act="of" data-id="${k}">${l} <i>${k==='all'?O.length:O.filter(x=>x.status===k).length}</i></button>`).join('');
+ const L=OF==='all'?O:O.filter(x=>x.status===OF);
+ $('#ol').innerHTML=L.length?orderTable(L):O.length?empty('cart','Aucune commande avec ce statut','Choisissez un autre filtre.'):NO_ORDER();
+ $('#ol5').innerHTML=O.length?orderTable(O.slice(0,5)):NO_ORDER('sm')}
+
+// ---------- Vendeuses ----------
+function shopsView(){const {S,P,O,PR}=D;
+ $('#sl').innerHTML=S.length?'<div class="cards">'+S.map(x=>{const owner=PR.find(y=>y.id===x.id),member=!owner||isMember(owner),
+  np=P.filter(y=>y.seller_id===x.id),no=O.filter(y=>y.seller_id===x.id).length,on=x.status==='active';
+  return `<article class="shop-card"><div class="sc-top">${logo(x)}<div><b>${esc(x.shop_name)}</b><small>${esc(x.location||'Localisation non renseignée')}</small></div><span class="badge ${on?'ok':'no'}">${on?'Active':'Suspendue'}</span></div>
+  <dl><div><dt>WhatsApp</dt><dd>${x.whatsapp?wa(x.whatsapp):'<span class="warn">manquant</span>'}</dd></div><div><dt>Produits</dt><dd>${np.filter(y=>y.is_approved).length} / ${np.length}</dd></div><div><dt>Commandes</dt><dd>${no}</dd></div></dl>
+  ${member?'':'<p class="warn">Retirée du groupe</p>'}
+  <div class="acts-row"><a class="btn ghost sm" href="vendeuse.html?id=${x.id}" target="_blank">${ic('ext')}Voir</a>${btn('es',x.id,ic('edit')+'Modifier')}${btn('st',x.id,on?'Suspendre':'Réactiver','btn ghost sm',` data-v="${on?'suspended':'active'}"`)}</div></article>`}).join('')+'</div>'
+  :`<div class="panel">${empty('store','Aucune boutique pour le moment','Une boutique s’ouvre automatiquement quand une membre du groupe crée son compte et se connecte pour la première fois.','<a class="btn" href="#membres">Ajouter une membre</a>')}</div>`}
+
+// ---------- Membres ----------
+function membersView(){const {MW}=D;
+ $('#mc').textContent=MW.length?`${MW.length} ${pl(MW.length,'membre')}`:'';
+ // Les membres à valider passent en premier.
+ const R=MW.map(w=>({w,...stateOf(w)})).sort((a,b)=>(b.st==='pending')-(a.st==='pending'));
+ $('#ml').innerHTML=MW.length?'<div class="tw"><table><tr><th>Membre</th><th>État</th><th>Compte inscrit</th><th></th></tr>'+R.map(({w,acc,sh,st})=>{
+  const badge={none:'<span class="badge">Pas encore inscrite</span>',pending:'<span class="badge warn-b">À valider</span>',active:'<span class="badge ok">Boutique active</span>',suspended:'<span class="badge no">Boutique suspendue</span>'}[st];
+  // Compte(s) trouvé(s) : à valider un par un (plusieurs comptes avec le même numéro = vérifier auprès de la membre).
+  const cand=st==='pending'?acc.map(p=>`<div class="cand"><span><b>${esc(p.full_name||'Sans nom')}</b><small>${esc(p.email||'')} · inscrite le ${day(p.created_at)}</small></span>${btn('act',p.id,ic('check')+'Activer','btn sm')}</div>`).join('')
+   +(acc.length>1?'<p class="warn">Plusieurs comptes utilisent ce numéro : appelez la membre pour savoir lequel est le sien.</p>':'')
+   :sh.length?`<small>${esc(sh[0].shop_name)}</small>`:'<small class="mut">—</small>';
+  return `<tr class="${st==='pending'?'hl':''}"><td><b>${esc(w.full_name||'—')}</b><br>${w.phone?wa(w.phone):''}${w.email?`<br><small class="mut">${esc(w.email)}</small>`:''}</td><td>${badge}</td><td>${cand}</td><td style="text-align:right">${btn('rm',w.id,'Retirer')}</td></tr>`}).join('')+'</table></div>'
+  :empty('user','Aucune membre pour le moment','Ajoutez ci-dessus le numéro WhatsApp de chaque vendeuse du groupe : c’est la première étape pour ouvrir les boutiques.')}
+
+// ---------- Produits ----------
+function productsView(){const q=$('#pq').value.trim().toLowerCase(),{P,C}=D,cat=id=>C.find(c=>c.id===id)?.name||'Sans niche';
+ const F=[['all','Tous',()=>1],['pub','Publiés',x=>x.is_approved],['off','Désactivés',x=>!x.is_approved],['ind','Indisponibles',x=>!x.is_available]],f=F.find(x=>x[0]===PF)[2];
+ $('#pf').innerHTML=F.map(([k,l,t])=>`<button type="button" class="chip${PF===k?' on':''}" data-act="pf" data-id="${k}">${l} <i>${P.filter(t).length}</i></button>`).join('');
+ const L=P.filter(f).filter(x=>!q||x.name.toLowerCase().includes(q)||(x.seller_profiles?.shop_name||'').toLowerCase().includes(q));
+ $('#pl').innerHTML=L.length?'<div class="tw"><table><tr><th>Produit</th><th>Niche</th><th>Prix</th><th>État</th><th></th></tr>'+L.map(x=>{const im=[...x.product_images].sort((a,b)=>a.position-b.position)[0];
+  return `<tr><td><div class="cell"><img class="th" src="${img(im?.path)}" alt=""><span><b>${esc(x.name)}</b><br><small class="mut">${esc(x.seller_profiles?.shop_name)}</small></span></div></td><td><small>${esc(cat(x.category_id))}</small></td><td><b>${money(x.price_fcfa)}</b></td>
+  <td><span class="badge ${x.is_approved?'ok':'no'}">${x.is_approved?'Publié':'Désactivé'}</span>${x.is_available?'':' <span class="badge">Indisponible</span>'}</td>
+  <td><div class="acts-row"><a class="btn ghost sm" href="produit.html?id=${x.id}" target="_blank" title="Voir">${ic('ext')}</a>${btn('ep',x.id,ic('edit')+'Modifier')}${btn('ap',x.id,x.is_approved?'Désactiver':'Réactiver','btn ghost sm',` data-v="${x.is_approved}"`)}${btn('dp',x.id,ic('trash'),'btn ghost sm',' title="Supprimer"')}</div></td></tr>`}).join('')+'</table></div>'
+  :P.length?empty('box','Aucun produit ne correspond','Modifiez la recherche ou le filtre.'):empty('box','Aucun produit pour le moment','Les produits apparaissent ici dès qu’une vendeuse les publie depuis son espace.')}
+$('#pq').oninput=productsView;
+
+// ---------- Niches ----------
+function nichesView(){const {C,P}=D;
+ $('#cl').innerHTML=C.map(x=>{const n=P.filter(y=>y.category_id===x.id).length;
+  return `<div class="tile"><span class="kpi-ic">${ic(x.icon)}</span><span><b>${esc(x.name)}</b><small>${n} ${pl(n,'produit')}</small></span><button type="button" class="x" data-act="dc" data-id="${x.id}" title="Supprimer" aria-label="Supprimer ${esc(x.name)}">${ic('trash')}</button></div>`}).join('')
+  ||`<div class="panel" style="grid-column:1/-1">${empty('gem','Aucune niche','Créez les catégories dans lesquelles les vendeuses rangeront leurs produits.')}</div>`}
+
+// ---------- Actions (délégation : un seul écouteur pour tous les boutons) ----------
+const ACTS={
+ focus:sel=>{const el=document.querySelector(sel);el?.scrollIntoView({behavior:'smooth',block:'center'});el?.focus()},
+ of:k=>{OF=k;ordersView()},
+ pf:k=>{PF=k;productsView()},
+ rm:async id=>{const m=D.MW.find(y=>y.id===id),{sh}=stateOf(m),on=sh.filter(s=>s.status==='active');
+  if(!confirm(`Retirer ${m.full_name||(m.phone?'+'+m.phone:m.email)} du groupe ?${on.length?'\nSa boutique sera suspendue et ses produits masqués.':''}`))return;
+  for(const s of on){const {error}=await sb.from('seller_profiles').update({status:'suspended'}).eq('id',s.id);if(error)return toast(error.message,1)}
+  run(sb.from('member_whitelist').delete().eq('id',m.id),'Membre retirée')},
+ act:async id=>{const p=D.PR.find(y=>y.id===id);
+  if(!confirm(`Activer la boutique de ${p.full_name||p.email} ?\nVérifiez d’abord auprès de la membre (par exemple sur WhatsApp) qu’il s’agit bien de son compte.`))return;
+  run(sb.rpc('admin_activate_seller',{target:id}),'Boutique activée : elle peut se connecter avec son numéro.')},
+ st:(id,b)=>run(sb.from('seller_profiles').update({status:b.dataset.v}).eq('id',id),b.dataset.v==='active'?'Boutique réactivée':'Boutique suspendue'),
+ es:id=>{const x=D.S.find(y=>y.id===id);
+  edit('Modifier la boutique',[{k:'shop_name',l:'Nom de la boutique',v:x.shop_name},{k:'whatsapp',l:'WhatsApp (ex. 77 123 45 67)',t:'tel',v:x.whatsapp},{k:'location',l:'Localisation',v:x.location},{k:'description',l:'Description',t:'area',v:x.description},{k:'logo',l:'Nouveau logo (facultatif)',t:'file'}],async(v,f)=>{
+   const w=v.whatsapp.trim()?normPhone(v.whatsapp):null;if(v.whatsapp.trim()&&!w)throw new Error(PHONE_ERR);
+   if(v.shop_name.trim().length<2)throw new Error('Nom de boutique trop court.');
+   const o={shop_name:v.shop_name.trim(),whatsapp:w,location:v.location.trim(),description:v.description.trim()},fl=f.logo.files[0];
+   if(fl){if(!IMG_OK(fl))throw new Error('Image invalide : JPG, PNG ou WebP, 3 Mo maximum.');
+    const path=`${x.id}/logo-${Date.now()}.${fl.type.split('/')[1]}`,u=await sb.storage.from('shop-media').upload(path,fl,{contentType:fl.type});if(u.error)throw u.error;o.logo_path=path}
+   const {error}=await sb.from('seller_profiles').update(o).eq('id',x.id);if(error)throw error})},
+ ap:(id,b)=>run(sb.from('products').update({is_approved:b.dataset.v!=='true'}).eq('id',id),b.dataset.v==='true'?'Produit désactivé':'Produit réactivé'),
+ ep:id=>{const x=D.P.find(y=>y.id===id);
+  edit('Modifier le produit',[{k:'name',l:'Nom',v:x.name},{k:'price',l:'Prix (FCFA)',t:'number',v:x.price_fcfa},{k:'cat',l:'Niche',t:'select',o:D.C.map(c=>[c.id,c.name]),v:x.category_id},{k:'description',l:'Description',t:'area',v:x.description}],async v=>{
+   const price=Number(v.price);if(!Number.isInteger(price)||price<1)throw new Error('Prix invalide : un nombre entier de FCFA, supérieur à 0.');
+   if(v.name.trim().length<2)throw new Error('Nom de produit trop court.');
+   const {error}=await sb.from('products').update({name:v.name.trim(),price_fcfa:price,category_id:v.cat||null,description:v.description.trim()}).eq('id',x.id);if(error)throw error})},
+ dp:async id=>{const x=D.P.find(y=>y.id===id);
+  if(!confirm(`Supprimer définitivement « ${x.name} » et ses photos ?\nLes commandes passées gardent leur historique.`))return;
+  const {error}=await sb.from('products').delete().eq('id',x.id);if(error)return toast(error.message,1);
+  if(x.product_images.length)await sb.storage.from('shop-media').remove(x.product_images.map(i=>i.path));
+  toast('Produit supprimé');load()},
+ dc:id=>{const x=D.C.find(y=>y.id===id),n=D.P.filter(y=>y.category_id===x.id).length;
+  if(!confirm(n?`Supprimer la niche « ${x.name} » ?\n${n} produit(s) n’auront plus de niche (ils restent en ligne).`:`Supprimer la niche « ${x.name} » ?`))return;
+  run(sb.from('categories').delete().eq('id',x.id),'Niche supprimée')}};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b)ACTS[b.dataset.act](b.dataset.id,b)});
+document.addEventListener('change',e=>{const s=e.target.closest('[data-os]');if(s)run(sb.from('seller_orders').update({status:s.value}).eq('id',s.dataset.os),'Statut mis à jour')});
+
+$('#pr').onsubmit=async e=>{e.preventDefault();const f=e.target,phone=normPhone(f.t.value),email=f.e.value.trim().toLowerCase()||null;
+ if(!phone){f.t.focus();return toast(PHONE_ERR,1)}
+ const {error}=await sb.from('member_whitelist').insert({phone,email,full_name:f.n.value.trim()||null});
+ if(error)return toast(error.code==='23505'?'Ce numéro ou cet e-mail est déjà dans la liste.':error.message,1);
+ // Une ancienne membre qui revient retrouve sa boutique (même numéro ou même e-mail).
+ const {data:back}=await sb.from('profiles').select('id').or(`phone.eq.${phone}${email?`,email.eq."${email}"`:''}`).eq('role','seller');
+ const sus=D.S.filter(s=>s.status==='suspended'&&(back||[]).some(p=>p.id===s.id));
+ for(const s of sus)await sb.from('seller_profiles').update({status:'active'}).eq('id',s.id);
+ toast(sus.length?'Membre ajoutée : sa boutique est réactivée.':'Membre ajoutée. Elle peut maintenant créer son compte avec ce numéro.');f.reset();load()};
+$('#cf').onsubmit=async e=>{e.preventDefault();const f=e.target,name=f.n.value.trim();if(name.length<2)return toast('Nom de niche trop court.',1);
+ const {error}=await sb.from('categories').insert({name,icon:f.i.value});
+ if(error)return toast(error.code==='23505'?'Cette niche existe déjà.':error.message,1);toast('Niche ajoutée');f.n.value='';load()};
+
+load();
 </script></body></html>
