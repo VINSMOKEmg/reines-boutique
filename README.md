@@ -8,7 +8,7 @@ index.html catalogue.html produit.html vendeuse.html panier.html connexion.html 
 dashboard.html mes-commandes.html profil-boutique.html mes-produits.html ajouter-produit.html modifier-produit.html admin.html apropos.html contact.html 404.html
 css/style.css
 js/ config.js  supabase.js  cart.js  ui.js
-assets/ logo.jpg  placeholder.svg
+assets/ logo.png (256 px : en-têtes, onglet)  logo-grand.png (1080 px : impression, réseaux)  hero.jpg  placeholder.svg
 supabase/schema.sql
 ```
 `modifier-produit.html` redirige vers `ajouter-produit.html?id=…` (même formulaire pour ajouter et modifier).
