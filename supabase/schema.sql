@@ -148,8 +148,9 @@ alter table seller_orders enable row level security; alter table order_items ena
 
 create policy profiles_read on profiles for select using (id=auth.uid() or is_admin());
 create policy profiles_update on profiles for update using (id=auth.uid() or is_admin());
--- Seuls le nom et le téléphone sont modifiables depuis le site : l'e-mail est une copie d'auth.users et ne doit pas pouvoir être usurpé.
-revoke update on profiles from authenticated, anon; grant update(full_name,phone) on profiles to authenticated;
+-- Seul le nom est modifiable depuis le site : l'e-mail (copie d'auth.users) et le numéro (fixé à l'inscription, sert à reconnaître
+-- les membres et à connecter les vendeuses) ne doivent pas pouvoir être usurpés. Le WhatsApp de boutique se modifie dans seller_profiles.
+revoke update on profiles from authenticated, anon; grant update(full_name) on profiles to authenticated;
 
 create policy sellers_read on seller_profiles for select using (status='active' or id=auth.uid() or is_admin());
 create policy sellers_update on seller_profiles for update using (id=auth.uid() or is_admin());
@@ -183,24 +184,46 @@ create policy media_insert on storage.objects for insert to authenticated with c
 create policy media_update on storage.objects for update to authenticated using (bucket_id='shop-media' and ((storage.foldername(name))[1]=auth.uid()::text or is_admin()));
 create policy media_delete on storage.objects for delete to authenticated using (bucket_id='shop-media' and ((storage.foldername(name))[1]=auth.uid()::text or is_admin()));
 
--- MEMBRES DU GROUPE : seules les adresses de cette liste (gérée par l'admin) peuvent devenir vendeuses.
-create table member_whitelist (id uuid primary key default gen_random_uuid(), email text not null unique check (email = lower(email)), full_name text, created_at timestamptz not null default now());
+-- MEMBRES DU GROUPE : liste gérée par l'admin, identifiée en priorité par le numéro WhatsApp (e-mail facultatif).
+create table member_whitelist (id uuid primary key default gen_random_uuid(),
+  phone text check (phone is null or phone ~ '^[0-9]{8,15}$'),
+  email text unique check (email = lower(email)),
+  full_name text, created_at timestamptz not null default now(),
+  constraint member_whitelist_contact_check check (email is not null or phone is not null));
+create unique index member_whitelist_phone_key on member_whitelist(phone) where phone is not null;
+create index profiles_phone_idx on profiles(phone);
 alter table member_whitelist enable row level security;
 create policy mw_admin on member_whitelist for all using (is_admin()) with check (is_admin());
--- Appelée à la connexion : active le rôle vendeuse si l'e-mail est CONFIRMÉ et présent dans la liste.
+
+-- Appelée à chaque connexion : un compte dont le numéro (ou l'e-mail) figure dans la liste renvoie 'pending'.
+-- C'est l'admin qui valide ensuite (admin_activate_seller) : le numéro saisi à l'inscription n'est pas vérifié par SMS.
 create function claim_membership() returns text language plpgsql security definer set search_path=public,auth as $$
 declare u record;
 begin
   select id,email,email_confirmed_at into u from auth.users where id=auth.uid();
   if u.id is null then return 'anon'; end if;
-  if u.email_confirmed_at is null then return 'unconfirmed'; end if;
-  if not exists(select 1 from member_whitelist where email=lower(u.email)) then return 'not_member'; end if;
   if exists(select 1 from profiles where id=u.id and role in ('seller','admin')) then return 'ok'; end if;
-  perform set_config('app.bypass','1',true);
-  update profiles set role='seller' where id=u.id;
-  return 'ok';
+  if exists(select 1 from member_whitelist w join profiles p on p.id=u.id where w.phone=p.phone or w.email=lower(u.email)) then return 'pending'; end if;
+  return 'not_member';
 end $$;
 revoke execute on function claim_membership() from public, anon; grant execute on function claim_membership() to authenticated;
+
+-- Validation par l'admin d'un compte inscrit avec le numéro d'une membre : la boutique est créée (trigger on_role_change).
+create function admin_activate_seller(target uuid) returns void language plpgsql security definer set search_path=public as $$
+begin
+  if not is_admin() then raise exception 'Réservé à l''administrateur'; end if;
+  update profiles set role='seller' where id=target and role='client';
+  if not found then raise exception 'Compte introuvable ou déjà vendeuse'; end if;
+  update seller_profiles set status='active' where id=target;
+end $$;
+revoke execute on function admin_activate_seller(uuid) from public, anon; grant execute on function admin_activate_seller(uuid) to authenticated;
+
+-- Connexion des vendeuses par numéro : renvoie l'e-mail du compte vendeuse lié à ce numéro (null sinon).
+-- Limité aux vendeuses validées, dont le numéro est de toute façon public sur leur boutique.
+create function seller_login_email(p text) returns text language sql stable security definer set search_path=public,auth as $$
+  select u.email from profiles pr join auth.users u on u.id=pr.id
+  where pr.phone=regexp_replace(coalesce(p,''),'\D','','g') and pr.role='seller' order by pr.created_at limit 1 $$;
+revoke execute on function seller_login_email(text) from public; grant execute on function seller_login_email(text) to anon, authenticated;
 
 -- PREMIER ADMINISTRATEUR : après avoir créé votre compte sur le site, exécutez (en remplaçant l'e-mail) :
 -- update profiles set role='admin' where id=(select id from auth.users where lower(email)=lower('votre@email.com'));

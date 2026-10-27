@@ -7,7 +7,7 @@
 
 <main class="w"><div class="auth f"><h1 style="font-size:32px">Connexion</h1><div class="note" id="nx" hidden>Connectez-vous pour valider votre commande. Vous pouvez continuer à parcourir la boutique sans compte.</div>
 <form id="f"><p class="mut" style="font-size:13px;margin:0">Clientes et vendeuses, connectez-vous ici : votre espace s’ouvre automatiquement.</p>
-<label>E-mail<input type="email" name="e" required autocomplete="email"></label><label>Mot de passe<input type="password" name="p" required autocomplete="current-password"></label>
+<label>E-mail ou numéro WhatsApp<input type="text" name="e" required autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="Vendeuses : votre numéro suffit"></label><label>Mot de passe<input type="password" name="p" required autocomplete="current-password"></label>
 <p style="text-align:right;margin:6px 0 0"><a class="lnk" href="#" id="fg">Mot de passe oublié ?</a></p>
 <p><button class="btn" style="width:100%">Se connecter</button></p></form>
 <form id="rf" hidden><h2 style="font-size:22px">Nouveau mot de passe</h2><p class="mut" style="font-size:13px;margin:0">Choisissez votre nouveau mot de passe (8 caractères minimum).</p>
@@ -18,31 +18,40 @@
 <script type="module">
 import {sb,me,requireRole,AUTH_LINK} from './js/supabase.js';
 import * as cart from './js/cart.js';
-import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
+import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini,normPhone} from './js/ui.js';
 const user=await header();
 
 const f=$('#f'),rf=$('#rf'),U=new URLSearchParams(location.search),nx=U.get('next'),okNx=/^[a-z\-]+\.html/.test(nx||'');
 if(okNx){if(nx==='panier.html')$('#nx').hidden=false;$('#cr').href='inscription.html?next='+encodeURIComponent(nx)}
 // Pages réservées à un rôle : on n'y renvoie que le bon rôle, sinon vers son propre espace.
-const ONLY={'admin.html':'admin','client.html':'client','dashboard.html':'seller','profil-boutique.html':'seller','mes-produits.html':'seller','ajouter-produit.html':'seller','modifier-produit.html':'seller'};
+const ONLY={'admin.html':'admin','client.html':'client','dashboard.html':'seller','mes-commandes.html':'seller','profil-boutique.html':'seller','mes-produits.html':'seller','ajouter-produit.html':'seller','modifier-produit.html':'seller'};
 const HOME={admin:'admin.html',seller:'dashboard.html',client:'client.html'};
 async function go(){
- // Membre du groupe : le compte devient vendeuse automatiquement (vérifié côté serveur, sans effet pour les autres).
- await sb.rpc('claim_membership');
+ // Membre du groupe pas encore validée par l'admin : 'pending' -> message d'attente dans l'espace cliente.
+ const {data:cm}=await sb.rpc('claim_membership');
  const u=await me(),role=u?.role||'client',page=(nx||'').split('?')[0];
+ if(role==='client'&&cm==='pending'&&!okNx)return location.href='client.html?attente=1';
  location.href=okNx&&(!ONLY[page]||ONLY[page]===role)?nx:HOME[role]}
-f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('button.btn');b.disabled=true;
- const {error}=await sb.auth.signInWithPassword({email:f.e.value.trim(),password:f.p.value});
- if(error){toast(/not confirmed/i.test(error.message)?'Confirmez d’abord votre e-mail (lien reçu à l’inscription), puis reconnectez-vous.':'E-mail ou mot de passe incorrect.',1);b.disabled=false;return}
+// Identifiant saisi -> e-mail du compte. Un numéro n'est accepté que pour une vendeuse validée.
+async function emailOf(id){
+ if(id.includes('@'))return id.toLowerCase();
+ const ph=normPhone(id);if(!ph)return null;
+ const {data}=await sb.rpc('seller_login_email',{p:ph});return data||null}
+f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('button.btn'),id=f.e.value.trim();b.disabled=true;
+ const email=await emailOf(id);
+ if(!email){toast(id.includes('@')||!normPhone(id)?'Saisissez votre e-mail, ou votre numéro WhatsApp si vous êtes vendeuse.':'Ce numéro n’est pas encore celui d’une vendeuse validée : connectez-vous avec votre e-mail.',1);b.disabled=false;return}
+ const {error}=await sb.auth.signInWithPassword({email,password:f.p.value});
+ if(error){toast(/not confirmed/i.test(error.message)?'Confirmez d’abord votre e-mail (lien reçu à l’inscription), puis reconnectez-vous.':'Identifiant ou mot de passe incorrect.',1);b.disabled=false;return}
  go()};
 
-// Mot de passe oublié : Supabase envoie un lien qui ramène ici avec une session temporaire.
-$('#fg').onclick=async e=>{e.preventDefault();const email=f.e.value.trim();
- if(!f.e.value||!f.e.checkValidity()){f.e.focus();return toast('Saisissez d’abord votre e-mail, puis cliquez sur « Mot de passe oublié ? ».',1)}
- const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:new URL('connexion.html',location.href).href});
- // Même message que le compte existe ou non, pour ne pas révéler les adresses inscrites.
+// Mot de passe oublié : Supabase envoie un lien (à l'e-mail du compte) qui ramène ici avec une session temporaire.
+$('#fg').onclick=async e=>{e.preventDefault();const id=f.e.value.trim();
+ if(!id){f.e.focus();return toast('Saisissez d’abord votre e-mail ou votre numéro, puis cliquez sur « Mot de passe oublié ? ».',1)}
+ const email=await emailOf(id);
+ const {error}=email?await sb.auth.resetPasswordForEmail(email,{redirectTo:new URL('connexion.html',location.href).href}):{};
+ // Même message que le compte existe ou non, pour ne pas révéler qui est inscrit.
  if(error&&/rate|limit|seconds/i.test(error.message))return toast('Trop de demandes : réessayez dans quelques minutes.',1);
- toast('Si un compte existe pour cette adresse, un e-mail de réinitialisation vient d’être envoyé.')};
+ toast('Si un compte correspond, un e-mail de réinitialisation vient d’être envoyé à son adresse e-mail.')};
 if(AUTH_LINK.error)toast('Ce lien a expiré ou a déjà été utilisé. Demandez un nouvel e-mail avec « Mot de passe oublié ? ».',1);
 if(AUTH_LINK.recovery&&(await sb.auth.getSession()).data.session){
  f.hidden=true;rf.hidden=false;$('#nx').hidden=true;document.querySelector('.auth h1').textContent='Réinitialisation';rf.p.focus();

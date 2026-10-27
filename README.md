@@ -5,7 +5,7 @@ HTML5 / CSS3 / JavaScript natif (modules ES) + Supabase (Auth, PostgreSQL, Stora
 ## Arborescence
 ```
 index.html catalogue.html produit.html vendeuse.html panier.html connexion.html inscription.html client.html
-dashboard.html profil-boutique.html mes-produits.html ajouter-produit.html modifier-produit.html admin.html apropos.html contact.html 404.html
+dashboard.html mes-commandes.html profil-boutique.html mes-produits.html ajouter-produit.html modifier-produit.html admin.html apropos.html contact.html 404.html
 css/style.css
 js/ config.js  supabase.js  cart.js  ui.js
 assets/ logo.jpg  placeholder.svg
@@ -16,7 +16,7 @@ supabase/schema.sql
 ## 1. Configurer Supabase
 1. Créez un projet sur supabase.com.
 2. **SQL Editor** : collez tout `supabase/schema.sql`, puis *Run*. Cela crée tables, index, triggers, politiques RLS, le bucket `shop-media` (JPG/PNG/WebP, 3 Mo max) et la fonction sécurisée `place_order`.
-   **Base déjà créée avec une version précédente ?** N’exécutez pas `schema.sql` à nouveau : lancez dans l’ordre les scripts de `supabase/migrations/` (`001_…`, `002_…`), chacun une seule fois suffit.
+   **Base déjà créée avec une version précédente ?** N’exécutez pas `schema.sql` à nouveau : lancez dans l’ordre les scripts de `supabase/migrations/` (`001_…`, `002_…`, `003_…`), chacun une seule fois suffit.
 3. **Authentication > Providers** : Email activé. **Laissez « Confirm email » activé** : c’est ce qui garantit que seules les membres de la liste deviennent vendeuses.
 4. **Authentication > URL Configuration** : ajoutez l’URL locale puis l’URL de production dans *Redirect URLs*, avec `/**` à la fin (ex. `http://localhost:3000/**`, `https://votre-site.netlify.app/**`). Sans cela, le lien « Mot de passe oublié ? » ne ramène pas sur `connexion.html`.
    **Authentication > Email Templates > Reset Password** : vous pouvez traduire l’e-mail en français (gardez `{{ .ConfirmationURL }}`).
@@ -34,11 +34,13 @@ Créez un compte via `inscription.html`, puis dans le SQL Editor :
 (La recherche passe par `auth.users`, l'e-mail réel et vérifié, et non par la copie de `profiles`.)
 
 ## 4. Vendeuses : réservé aux membres du groupe
-Le site appartient à un groupe : seules les membres peuvent vendre.
-1. Dans `admin.html` > **Membres du groupe**, l’admin ajoute l’e-mail de chaque membre.
-2. La membre crée son compte sur `inscription.html` avec cet e-mail et **confirme son e-mail**.
-3. À sa connexion, elle devient vendeuse automatiquement et sa boutique est créée. Elle gère ensuite seule son logo, son WhatsApp et ses produits (publiés immédiatement), sans accord de l’admin.
-Un compte dont l’e-mail n’est pas dans la liste reste cliente. « Retirer » une membre suspend sa boutique.
+Le site appartient à un groupe : seules les membres peuvent vendre. Elles sont reconnues par leur **numéro WhatsApp**.
+1. Dans `admin.html` > **Membres du groupe**, l’admin ajoute le numéro WhatsApp de chaque membre (nom et e-mail facultatifs).
+2. La membre crée son compte sur `inscription.html` avec **ce même numéro** (et confirme son e-mail si la confirmation est activée).
+3. Elle apparaît **« À valider »** dans l’admin (et dans « À traiter » du tableau de bord). Le numéro saisi à l’inscription n’étant pas vérifié par SMS, l’admin s’assure que c’est bien elle (par exemple sur WhatsApp), puis clique **Activer** : sa boutique est créée avec ce numéro comme WhatsApp.
+4. Elle se connecte ensuite avec **son numéro (ou son e-mail) et son mot de passe**. Elle gère seule son logo, son WhatsApp et ses produits (publiés immédiatement).
+Un compte hors liste reste cliente. Si plusieurs comptes utilisent le numéro d’une membre, l’admin les voit tous et n’active que le bon. « Retirer » une membre suspend sa boutique ; l’ajouter de nouveau la réactive.
+La connexion par numéro est réservée aux vendeuses validées ; les clientes se connectent avec leur e-mail.
 L’admin peut modifier toute boutique ou tout produit, désactiver ou supprimer un produit, suspendre ou réactiver une boutique, et gérer les niches.
 
 ## 5. Parcours de commande
@@ -55,6 +57,8 @@ Site 100 % statique : Netlify, Vercel, Cloudflare Pages ou GitHub Pages (dépose
 - [ ] « Mot de passe oublié ? » : l’e-mail arrive, le lien ouvre le formulaire « Nouveau mot de passe », la connexion fonctionne ensuite avec le nouveau mot de passe ; un lien déjà utilisé affiche « lien expiré ».
 - [ ] A et B ajoutées aux membres par l’admin, inscrites avec cet e-mail et confirmées : boutiques actives à la connexion.
 - [ ] Un compte hors liste ne devient jamais vendeuse (essayer aussi `sb.rpc('claim_membership')` depuis la console).
+- [ ] Membre ajoutée par numéro, inscrite avec ce numéro : « À valider » dans l’admin, aucune boutique avant le clic sur « Activer » ; ensuite connexion possible avec le numéro + mot de passe.
+- [ ] Une cliente ne peut pas se connecter avec son numéro (message « pas encore celui d’une vendeuse validée »).
 - [ ] A crée un produit : visible aussitôt au catalogue ; l’admin le désactive, A ne peut pas le réactiver.
 - [ ] B ne voit ni ne modifie les produits de A (essayer un `update` sur un id de A : 0 ligne).
 - [ ] A envoie une image > 3 Mo ou un PDF : refusé. A écrit dans le dossier de B : refusé.
