@@ -27,7 +27,8 @@ Les modules ES exigent un serveur (pas de double-clic sur le fichier) :
 
 ## 3. Premier administrateur
 Créez un compte via `inscription.html`, puis dans le SQL Editor :
-`update profiles set role='admin' where email='votre@email.com';`
+`update profiles set role='admin' where id=(select id from auth.users where lower(email)=lower('votre@email.com'));`
+(La recherche passe par `auth.users`, l'e-mail réel et vérifié, et non par la copie de `profiles`.)
 
 ## 4. Vendeuses : réservé aux membres du groupe
 Le site appartient à un groupe : seules les membres peuvent vendre.
@@ -46,6 +47,7 @@ Site 100 % statique : Netlify, Vercel, Cloudflare Pages ou GitHub Pages (dépose
 ## 7. Checklist de tests (2 vendeuses A et B, 2 clientes C1 et C2)
 - [ ] Inscription C1 : rôle `client`, accès à `client.html`, redirection refusée vers `dashboard.html` et `admin.html`.
 - [ ] Console navigateur : `sb.from('profiles').update({role:'admin'})` est refusé (trigger + RLS).
+- [ ] Console navigateur : `sb.from('profiles').update({email:'autre@mail.com'}).eq('id', monId)` est refusé (permission denied).
 - [ ] A et B ajoutées aux membres par l’admin, inscrites avec cet e-mail et confirmées : boutiques actives à la connexion.
 - [ ] Un compte hors liste ne devient jamais vendeuse (essayer aussi `sb.rpc('claim_membership')` depuis la console).
 - [ ] A crée un produit : visible aussitôt au catalogue ; l’admin le désactive, A ne peut pas le réactiver.

@@ -59,6 +59,11 @@ $$ select exists(select 1 from profiles where id=auth.uid() and role='admin') $$
 create function handle_new_user() returns trigger language plpgsql security definer set search_path=public as $$
 begin insert into profiles(id,email,full_name,role) values(new.id,new.email,left(coalesce(new.raw_user_meta_data->>'full_name',''),80),'client'); return new; end $$;
 create trigger on_auth_user_created after insert on auth.users for each row execute function handle_new_user();
+-- Garde profiles.email aligné sur l'e-mail réel quand celui-ci change.
+create function sync_profile_email() returns trigger language plpgsql security definer set search_path=public as $$
+begin update profiles set email=new.email where id=new.id; return new; end $$;
+create trigger on_auth_user_email after update of email on auth.users for each row
+  when (new.email is distinct from old.email) execute function sync_profile_email();
 
 -- Quand un compte devient vendeuse, sa boutique (en attente) est créée.
 create function on_role_change() returns trigger language plpgsql security definer set search_path=public as $$
@@ -90,7 +95,8 @@ create function admin_set_role(target_email text, new_role user_role) returns vo
 language plpgsql security definer set search_path=public as $$
 begin
   if not is_admin() then raise exception 'Réservé à l''administrateur'; end if;
-  update profiles set role=new_role where lower(email)=lower(target_email);
+  -- Recherche par l'e-mail réel (auth.users), jamais par la copie de profiles.
+  update profiles p set role=new_role from auth.users u where u.id=p.id and lower(u.email)=lower(target_email);
   if not found then raise exception 'Aucun compte avec cet e-mail'; end if;
 end $$;
 
@@ -136,6 +142,8 @@ alter table seller_orders enable row level security; alter table order_items ena
 
 create policy profiles_read on profiles for select using (id=auth.uid() or is_admin());
 create policy profiles_update on profiles for update using (id=auth.uid() or is_admin());
+-- Seul le nom est modifiable depuis le site : l'e-mail est une copie d'auth.users et ne doit pas pouvoir être usurpé.
+revoke update on profiles from authenticated, anon; grant update(full_name) on profiles to authenticated;
 
 create policy sellers_read on seller_profiles for select using (status='active' or id=auth.uid() or is_admin());
 create policy sellers_update on seller_profiles for update using (id=auth.uid() or is_admin());
@@ -189,4 +197,4 @@ end $$;
 revoke execute on function claim_membership() from public, anon; grant execute on function claim_membership() to authenticated;
 
 -- PREMIER ADMINISTRATEUR : après avoir créé votre compte sur le site, exécutez (en remplaçant l'e-mail) :
--- update profiles set role='admin' where email='votre@email.com';
+-- update profiles set role='admin' where id=(select id from auth.users where lower(email)=lower('votre@email.com'));
