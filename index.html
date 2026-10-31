@@ -13,19 +13,40 @@
 <section class="vband" id="vendeuses"><div><span class="eyebrow">Nos vendeuses</span><h2>Des entrepreneuses passionnées</h2><p>Découvrez leurs histoires, leurs univers et soutenez leurs projets.</p><a class="btn pk" href="boutique/vendeuses.html">Voir toutes les vendeuses →</a></div><div class="vs" id="sellers"></div></section>
 <footer class="foot" id="ftr"></footer></div></div>
 <script type="module">
-import {sb,me,requireRole} from './js/supabase.js';
-import * as cart from './js/cart.js';
-import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
+import { sb } from './js/supabase.js';
+import { $, esc, img, card, PSEL, header, ic } from './js/ui.js';
 
 await header();
-import {DEMO,demoCard} from './js/demo.js';import {DEMO_WHEN_EMPTY as DEMO_ON} from './js/config.js';
-$('#strip').innerHTML=[['shield','Produits authentiques','Faits avec passion'],['heart','Vendeuses vérifiées','Confiance & sécurité'],['truck','Livraison facile','Selon la vendeuse'],['wallet','Paiement à la vendeuse','Simple et direct']].map(x=>`<div><b>${ic(x[0])}</b><span>${x[1]}<small>${x[2]}</small></span></div>`).join('');
-const [c,p,s]=await Promise.all([sb.from('categories').select('id,name,icon').order('name'),sb.from('products').select(PSEL).eq('is_approved',true).order('created_at',{ascending:false}).limit(8),sb.from('seller_profiles').select('id,shop_name,logo_path,location').eq('status','active').limit(5)]);
-const C=(c.data&&c.data.length)?c.data:DEMO.cats,pref=['Mode & Prêt-à-porter','Beauté & Soins','Maison & Déco','Alimentation & Épicerie','Artisanat'];
-const top=pref.map(n=>C.find(x=>x.name===n)).filter(Boolean);const five=(top.length===5?top:C.slice(0,5));
-$('#cats').innerHTML=five.map(x=>`<a class="cat" href="boutique/catalogue.html${x.id?'?c='+x.id:''}"><b>${ic(x.icon)}</b>${esc(x.name)}</a>`).join('')+`<a class="cat" href="boutique/catalogue.html#niches"><b>${ic('dots')}</b>Autres</a>`;
-$('#prods').innerHTML=(p.data&&p.data.length?p.data.map(card).join(''):DEMO_ON?DEMO.products.map(demoCard).join(''):'')||'<p class="mut" style="grid-column:1/-1">Les premiers produits arrivent bientôt.</p>';
-const S=((s.data&&s.data.length)||!DEMO_ON)?(s.data||[]):DEMO.sellers;
-$('#sellers').innerHTML=S.map(x=>`<a class="v" href="${x.demo?'boutique/vendeuses.html':'boutique/vendeuse.html?id='+x.id}">${x.logo_path?`<img class="av" src="${img(x.logo_path)}" alt="">`:`<div class="av">${esc(x.shop_name[0])}</div>`}<b>${esc(x.shop_name)}</b><small>${esc(x.location||'')}</small></a>`).join('')||'<p class="mut">Les premières boutiques arrivent bientôt.</p>';
-
+import { DEMO, demoCard } from './js/demo.js';
+import { DEMO_WHEN_EMPTY as DEMO_ON } from './js/config.js';
+$('#strip').innerHTML = [
+  ['shield', 'Produits authentiques', 'Faits avec passion'],
+  ['heart', 'Vendeuses vérifiées', 'Confiance & sécurité'],
+  ['truck', 'Livraison facile', 'Selon la vendeuse'],
+  ['wallet', 'Paiement à la vendeuse', 'Simple et direct']
+]
+  .map(x => `<div><b>${ic(x[0])}</b><span>${x[1]}<small>${x[2]}</small></span></div>`)
+  .join('');
+const [c, p, s] = await Promise.all([
+  sb.from('categories').select('id,name,icon').order('name'),
+  sb.from('products').select(PSEL).eq('is_approved', true).order('created_at', { ascending: false }).limit(8),
+  sb.from('seller_profiles').select('id,shop_name,logo_path,location').eq('status', 'active').limit(5)
+]);
+const C = c.data && c.data.length ? c.data : DEMO.cats,
+  pref = ['Mode & Prêt-à-porter', 'Beauté & Soins', 'Maison & Déco', 'Alimentation & Épicerie', 'Artisanat'];
+const top = pref.map(n => C.find(x => x.name === n)).filter(Boolean);
+const five = top.length === 5 ? top : C.slice(0, 5);
+$('#cats').innerHTML =
+  five
+    .map(x => `<a class="cat" href="boutique/catalogue.html${x.id ? '?c=' + x.id : ''}"><b>${ic(x.icon)}</b>${esc(x.name)}</a>`)
+    .join('') + `<a class="cat" href="boutique/catalogue.html#niches"><b>${ic('dots')}</b>Autres</a>`;
+$('#prods').innerHTML =
+  (p.data && p.data.length ? p.data.map(card).join('') : DEMO_ON ? DEMO.products.map(demoCard).join('') : '') ||
+  '<p class="mut" style="grid-column:1/-1">Les premiers produits arrivent bientôt.</p>';
+const S = (s.data && s.data.length) || !DEMO_ON ? s.data || [] : DEMO.sellers;
+$('#sellers').innerHTML =
+  S.map(
+    x =>
+      `<a class="v" href="${x.demo ? 'boutique/vendeuses.html' : 'boutique/vendeuse.html?id=' + x.id}">${x.logo_path ? `<img class="av" src="${img(x.logo_path)}" alt="">` : `<div class="av">${esc(x.shop_name[0])}</div>`}<b>${esc(x.shop_name)}</b><small>${esc(x.location || '')}</small></a>`
+  ).join('') || '<p class="mut">Les premières boutiques arrivent bientôt.</p>';
 </script></body></html>

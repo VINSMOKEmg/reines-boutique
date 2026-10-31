@@ -22,7 +22,7 @@ Les pages rangées dans un dossier commencent par `<base href="../">` : tous leu
 ## 1. Configurer Supabase
 1. Créez un projet sur supabase.com.
 2. **SQL Editor** : collez tout `supabase/schema.sql`, puis *Run*. Cela crée tables, index, triggers, politiques RLS, le bucket `shop-media` (JPG/PNG/WebP, 3 Mo max) et la fonction sécurisée `place_order`.
-   **Base déjà créée avec une version précédente ?** N’exécutez pas `schema.sql` à nouveau : lancez dans l’ordre les scripts de `supabase/migrations/` (`001_…`, `002_…`, `003_…`), chacun une seule fois suffit.
+   **Base déjà créée avec une version précédente ?** N’exécutez pas `schema.sql` à nouveau : lancez dans l’ordre les scripts de `supabase/migrations/` (`001_…` à `004_…`), chacun une seule fois suffit.
 3. **Authentication > Providers** : Email activé. **Laissez « Confirm email » activé** : c’est ce qui garantit que seules les membres de la liste deviennent vendeuses.
 4. **Authentication > URL Configuration** : ajoutez l’URL locale puis l’URL de production dans *Redirect URLs*, avec `/**` à la fin (ex. `http://localhost:3000/**`, `https://votre-site.netlify.app/**`). Sans cela, le lien « Mot de passe oublié ? » ne ramène pas sur `connexion.html`.
    **Authentication > Email Templates > Reset Password** : vous pouvez traduire l’e-mail en français (gardez `{{ .ConfirmationURL }}`).
@@ -74,4 +74,8 @@ Site 100 % statique : Netlify, Vercel, Cloudflare Pages ou GitHub Pages (dépose
 - [ ] Suspension de A par l’admin : ses produits disparaissent du catalogue.
 
 ## Limites de cette version
-Pas de variantes (tailles/couleurs), de signalements, de textes de page d’accueil modifiables depuis l’admin ni de notifications ; stock affiché sans décrément automatique. À ajouter ensuite.
+- **Stock** : vide = illimité ; sinon vérifié et décompté à chaque commande, produit « Épuisé » à 0, remis en stock si la commande est annulée.
+- **Option** : un seul intitulé par produit (ex. Taille) avec sa liste de choix ; pas de prix ni de stock différents par option.
+- **Alertes vendeuse** : en direct tant que l’espace vendeuse est ouvert (message, son, notification du navigateur). Pas d’e-mail ni de SMS automatiques : il faudrait une fonction serveur et un service d’envoi.
+- **Anti-abus** : 5 commandes par heure et par compte.
+- Pas de signalements ni de textes d’accueil modifiables depuis l’admin.
