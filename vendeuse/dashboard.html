@@ -15,7 +15,7 @@ const {u,shop}=S,pl=(n,s,p=s+'s')=>n>1?p:s;
 
 const [p,o]=await Promise.all([
  sb.from('products').select('id,is_available,is_approved,product_images(path)').eq('seller_id',u.id),
- sb.from('seller_orders').select('id,ref,total,status,created_at,order_items(name,qty)').eq('seller_id',u.id).order('created_at',{ascending:false}).limit(200)]);
+ sb.from('seller_orders').select('id,ref,total,status,created_at,order_items(name,qty,option)').eq('seller_id',u.id).order('created_at',{ascending:false}).limit(200)]);
 const P=p.data||[],O=o.data||[];
 const nNew=O.filter(x=>x.status==='nouvelle').length,nOn=P.filter(x=>x.is_approved&&x.is_available).length,nOff=P.filter(x=>!x.is_available).length,
  sales=O.filter(x=>x.status==='confirmee'||x.status==='livree').reduce((a,x)=>a+x.total,0);
@@ -40,4 +40,6 @@ ${done<ST.length?`<div class="panel start"><div class="panel-h"><h2>Bien démarr
   <small>${esc(shop.location||'Localisation non renseignée')}</small><small>${shop.whatsapp?'WhatsApp +'+esc(shop.whatsapp):'<span class="warn">Numéro WhatsApp manquant</span>'}</small>
   <div class="acts-row"><a class="btn ghost sm" href="boutique/vendeuse.html?id=${u.id}" target="_blank">${ic('ext')}Voir</a><a class="btn ghost sm" href="vendeuse/profil-boutique.html">${ic('edit')}Modifier</a></div></div></div>
 </div>`;
+// Nouvelle commande reçue en direct (voir ui.js) : on recharge pour l'afficher.
+document.addEventListener('commande',()=>setTimeout(()=>location.reload(),1500));
 </script></body></html>

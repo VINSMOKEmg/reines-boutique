@@ -9,6 +9,7 @@
   <nav id="nav" aria-label="Administration"></nav>
   <div class="app-side-foot">
    <a href="index.html" target="_blank" title="Voir le site"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg><span class="lbl">Voir le site</span></a>
+   <a href="compte/client.html" title="Mes achats"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span class="lbl">Mes achats</span></a>
    <div class="app-user" id="me"></div>
    <button type="button" id="lo" title="Déconnexion"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span class="lbl">Déconnexion</span></button>
   </div>
@@ -21,7 +22,7 @@
 <dialog id="dl"><form class="f" id="df"></form></dialog>
 <script type="module">
 import {sb,requireRole} from './js/supabase.js';
-import {$,esc,money,img,toast,logout,ic,ICONS,normPhone,PHONE_ERR,statusSelect} from './js/ui.js';
+import {$,esc,money,img,toast,logout,ic,ICONS,normPhone,PHONE_ERR,statusSelect,itemTxt,stockTxt} from './js/ui.js';
 const a=await requireRole(['admin']);if(!a)throw 0;
 
 const CAT_ICONS=Object.keys(ICONS).slice(0,16);  // les 16 premières icônes sont celles des niches
@@ -100,9 +101,9 @@ async function load(){
  const [mw,s,p,c,o]=await Promise.all([
   sb.from('member_whitelist').select('*').order('created_at',{ascending:false}),
   sb.from('seller_profiles').select('*').order('created_at'),
-  sb.from('products').select('id,name,description,price_fcfa,is_approved,is_available,category_id,seller_id,created_at,seller_profiles(shop_name),product_images(path,position)').order('created_at',{ascending:false}).limit(500),
+  sb.from('products').select('id,name,description,price_fcfa,is_approved,is_available,stock,option_label,options,category_id,seller_id,created_at,seller_profiles(shop_name),product_images(path,position)').order('created_at',{ascending:false}).limit(500),
   sb.from('categories').select('id,name,icon').order('name'),
-  sb.from('seller_orders').select('id,ref,total,status,created_at,seller_id,seller_profiles(shop_name),orders(profiles(full_name,phone,email)),order_items(name,qty)').order('created_at',{ascending:false}).limit(200)]);
+  sb.from('seller_orders').select('id,ref,total,status,created_at,seller_id,seller_profiles(shop_name),orders(profiles(full_name,phone,email)),order_items(name,qty,option)').order('created_at',{ascending:false}).limit(200)]);
  for(const r of [mw,s,p,c,o])if(r.error)toast('Chargement incomplet : '+r.error.message,1);
  const MW=mw.data||[],S=s.data||[],phones=MW.map(x=>x.phone).filter(Boolean),emails=MW.map(x=>x.email).filter(Boolean);
  // Comptes utiles : propriétaires des boutiques et comptes portant le numéro ou l'e-mail d'une membre.
@@ -145,7 +146,7 @@ function overview(){const {MW,PR,S,P,C,O}=D,ST_=MW.map(stateOf);
 function orderTable(L){
  return '<div class="tw"><table><tr><th>Référence</th><th>Cliente</th><th>Boutique</th><th>Articles</th><th>Total</th><th>Statut</th></tr>'+L.map(x=>{const cl=x.orders?.profiles;
   return `<tr><td><b>${esc(x.ref)}</b><br><small class="mut">${day(x.created_at)}</small></td><td>${esc(cl?.full_name||cl?.email||'—')}<br><small>${wa(cl?.phone)}</small></td><td>${esc(x.seller_profiles?.shop_name)}</td>
-  <td><small>${x.order_items.map(i=>`${esc(i.name)} × ${i.qty}`).join('<br>')}</small></td><td><b>${money(x.total)}</b></td><td>${statusSelect(x.status,`data-os="${x.id}"`)}</td></tr>`}).join('')+'</table></div>'}
+  <td><small>${x.order_items.map(itemTxt).join('<br>')}</small></td><td><b>${money(x.total)}</b></td><td>${statusSelect(x.status,`data-os="${x.id}"`)}</td></tr>`}).join('')+'</table></div>'}
 const NO_ORDER=cl=>empty('cart','Aucune commande pour le moment','Les commandes apparaissent ici dès qu’une cliente valide son panier.','',cl);
 function ordersView(){const {O}=D,F=[['all','Toutes'],['nouvelle','Nouvelles'],['confirmee','Confirmées'],['livree','Livrées'],['annulee','Annulées']];
  $('#of').innerHTML=F.map(([k,l])=>`<button type="button" class="chip${OF===k?' on':''}" data-act="of" data-id="${k}">${l} <i>${k==='all'?O.length:O.filter(x=>x.status===k).length}</i></button>`).join('');
@@ -184,7 +185,7 @@ function productsView(){const q=$('#pq').value.trim().toLowerCase(),{P,C}=D,cat=
  const L=P.filter(f).filter(x=>!q||x.name.toLowerCase().includes(q)||(x.seller_profiles?.shop_name||'').toLowerCase().includes(q));
  $('#pl').innerHTML=L.length?'<div class="tw"><table><tr><th>Produit</th><th>Niche</th><th>Prix</th><th>État</th><th></th></tr>'+L.map(x=>{const im=[...x.product_images].sort((a,b)=>a.position-b.position)[0];
   return `<tr><td><div class="cell"><img class="th" src="${img(im?.path)}" alt=""><span><b>${esc(x.name)}</b><br><small class="mut">${esc(x.seller_profiles?.shop_name)}</small></span></div></td><td><small>${esc(cat(x.category_id))}</small></td><td><b>${money(x.price_fcfa)}</b></td>
-  <td><span class="badge ${x.is_approved?'ok':'no'}">${x.is_approved?'Publié':'Désactivé'}</span>${x.is_available?'':' <span class="badge">Indisponible</span>'}</td>
+  <td><span class="badge ${x.is_approved?'ok':'no'}">${x.is_approved?'Publié':'Désactivé'}</span>${x.is_available?'':' <span class="badge">Indisponible</span>'}${stockTxt(x)?`<br><small class="mut">${stockTxt(x)}</small>`:''}</td>
   <td><div class="acts-row"><a class="btn ghost sm" href="boutique/produit.html?id=${x.id}" target="_blank" title="Voir">${ic('ext')}</a>${btn('ep',x.id,ic('edit')+'Modifier')}${btn('ap',x.id,x.is_approved?'Désactiver':'Réactiver','btn ghost sm',` data-v="${x.is_approved}"`)}${btn('dp',x.id,ic('trash'),'btn ghost sm',' title="Supprimer"')}</div></td></tr>`}).join('')+'</table></div>'
   :P.length?empty('box','Aucun produit ne correspond','Modifiez la recherche ou le filtre.'):empty('box','Aucun produit pour le moment','Les produits apparaissent ici dès qu’une vendeuse les publie depuis son espace.')}
 $('#pq').oninput=productsView;

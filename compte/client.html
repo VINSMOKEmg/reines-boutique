@@ -7,14 +7,32 @@
 <main id="app" class="w"></main>
 <footer class="foot" id="ftr"></footer></div></div>
 <script type="module">
-import {sb,me,requireRole} from './js/supabase.js';
-import * as cart from './js/cart.js';
-import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini,statusBadge,statusSelect} from './js/ui.js';
-const user=await header();
+import { sb, requireRole } from './js/supabase.js';
+import { $, esc, money, header, seller, logout, statusBadge, itemTxt } from './js/ui.js';
+import { HOME } from './js/supabase.js';
+await header();
 
-const u=await requireRole(['client']);if(!u)throw 0;
-$('#app').innerHTML=`<h1>Bonjour ${esc(u.full_name)}</h1>${new URLSearchParams(location.search).has('attente')?'<div class="note"><b>Votre numéro est reconnu comme membre du groupe.</b><br>L’administration doit maintenant valider votre boutique. Vous recevrez la confirmation ; vous pourrez alors vous connecter avec votre numéro WhatsApp et gérer vos produits.</div>':''}<p><button class="btn ghost sm" id="lo">Déconnexion</button></p><h2>Mes commandes</h2><div id="o">Chargement…</div>`;$('#lo').onclick=logout;
-const {data}=await sb.from('orders').select('ref,created_at,seller_orders(ref,total,status,seller_profiles(shop_name),order_items(name,qty,unit_price))').order('created_at',{ascending:false});
-$('#o').innerHTML=(data||[]).map(o=>`<div class="box"><b>${esc(o.ref)}</b> <span class="mut">${new Date(o.created_at).toLocaleDateString('fr-FR')}</span>${o.seller_orders.map(s=>`<p><b>${esc(s.seller_profiles.shop_name)}</b> · ${money(s.total)} ${statusBadge(s.status)}<br>${s.order_items.map(i=>`${esc(i.name)} × ${i.qty}`).join(', ')}</p>`).join('')}</div>`).join('')||'<p class="mut">Aucune commande pour le moment.</p>';
-
+// Ouverte à tous les comptes : une vendeuse ou l'admin qui achète y retrouve aussi ses commandes.
+const u = await requireRole(['client', 'seller', 'admin']);
+if (!u) throw 0;
+const attente = new URLSearchParams(location.search).has('attente');
+$('#app').innerHTML = `<h1>${u.role === 'client' ? `Bonjour ${esc(u.full_name)}` : 'Mes achats'}</h1>
+${attente ? '<div class="note"><b>Votre numéro est reconnu comme membre du groupe.</b><br>L’administration doit maintenant valider votre boutique. Vous pourrez ensuite vous connecter avec votre numéro WhatsApp et gérer vos produits.</div>' : ''}
+<p style="display:flex;gap:8px;flex-wrap:wrap">${u.role !== 'client' ? `<a class="btn ghost sm" href="${HOME[u.role]}">Retour à mon espace</a>` : ''}<button class="btn ghost sm" id="lo">Déconnexion</button></p>
+<h2>Mes commandes</h2><div id="o">Chargement…</div>`;
+$('#lo').onclick = logout;
+// Filtre explicite sur ses propres commandes (l'admin a le droit de toutes les lire).
+const { data } = await sb
+  .from('orders')
+  .select('ref,created_at,seller_orders(ref,total,status,seller_profiles(shop_name),order_items(name,qty,unit_price,option))')
+  .eq('client_id', u.id)
+  .order('created_at', { ascending: false });
+$('#o').innerHTML =
+  (data || [])
+    .map(
+      o =>
+        `<div class="box"><b>${esc(o.ref)}</b> <span class="mut">${new Date(o.created_at).toLocaleDateString('fr-FR')}</span>${o.seller_orders.map(s => `<p><b>${esc(s.seller_profiles.shop_name)}</b> · ${money(s.total)} ${statusBadge(s.status)}<br>${s.order_items.map(itemTxt).join(', ')}</p>`).join('')}</div>`
+    )
+    .join('') ||
+  '<p class="mut">Aucune commande pour le moment. <a class="lnk" href="boutique/catalogue.html">Découvrir la boutique</a></p>';
 </script></body></html>
