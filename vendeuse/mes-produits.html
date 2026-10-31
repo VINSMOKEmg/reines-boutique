@@ -6,22 +6,22 @@
 <div class="app-shell"><aside class="app-side" id="sidebar"></aside><main class="app-main"><header class="app-top" id="top"></header><div id="bn"></div><div id="app"></div></main></div>
 <script type="module">
 import {sb} from './js/supabase.js';
-import {$,esc,money,img,toast,ic,seller,empty} from './js/ui.js';
+import {$,esc,money,img,toast,ic,seller,empty,stockTxt} from './js/ui.js';
 const S=await seller('vendeuse/mes-produits.html',{title:'Mes produits',sub:'Vos produits sur le site. Un produit indisponible reste visible mais ne peut pas être commandé.',
  actions:`<a class="btn" href="vendeuse/ajouter-produit.html">${ic('plus')}Ajouter un produit</a>`});
 if(!S)throw 0;
 const {u}=S;let P=[],F='all';
-const FL=[['all','Tous',()=>1],['on','En ligne',x=>x.is_approved&&x.is_available],['ind','Indisponibles',x=>!x.is_available],['off','Désactivés par l’admin',x=>!x.is_approved]];
+const FL=[['all','Tous',()=>1],['on','En ligne',x=>x.is_approved&&x.is_available],['ind','Indisponibles / épuisés',x=>!x.is_available||x.stock===0],['off','Désactivés par l’admin',x=>!x.is_approved]];
 
 $('#app').innerHTML='<div class="toolbar"><input type="search" id="q" placeholder="Rechercher un produit…" aria-label="Rechercher"><div class="filters-row" id="fl"></div></div><div class="panel flush" id="pl"></div>';
 async function load(){
- const {data,error}=await sb.from('products').select('id,name,price_fcfa,is_available,is_approved,categories(name),product_images(path,position)').eq('seller_id',u.id).order('created_at',{ascending:false});
+ const {data,error}=await sb.from('products').select('id,name,price_fcfa,is_available,is_approved,stock,option_label,options,categories(name),product_images(path,position)').eq('seller_id',u.id).order('created_at',{ascending:false});
  if(error)toast('Chargement impossible : '+error.message,1);P=data||[];draw()}
 function draw(){const q=$('#q').value.trim().toLowerCase(),f=FL.find(x=>x[0]===F)[2],L=P.filter(f).filter(x=>!q||x.name.toLowerCase().includes(q));
  $('#fl').innerHTML=FL.map(([k,l,t])=>`<button type="button" class="chip${F===k?' on':''}" data-f="${k}">${l} <i>${P.filter(t).length}</i></button>`).join('');
  $('#pl').innerHTML=L.length?'<div class="tw"><table><tr><th>Produit</th><th>Niche</th><th>Prix</th><th>État</th><th></th></tr>'+L.map(x=>{const im=[...x.product_images].sort((a,b)=>a.position-b.position)[0];
   return `<tr><td><div class="cell"><img class="th" src="${img(im?.path)}" alt=""><b>${esc(x.name)}</b></div></td><td><small>${esc(x.categories?.name||'—')}</small></td><td><b>${money(x.price_fcfa)}</b></td>
-  <td>${x.is_approved?`<span class="badge ${x.is_available?'ok':''}">${x.is_available?'En ligne':'Indisponible'}</span>`:'<span class="badge no">Désactivé par l’administration</span>'}</td>
+  <td>${x.is_approved?`<span class="badge ${x.is_available?'ok':''}">${x.is_available?'En ligne':'Indisponible'}</span>`:'<span class="badge no">Désactivé par l’administration</span>'}<br><small class="mut">${x.stock==null?'Stock illimité':stockTxt(x)}${x.options?.length?` · ${esc(x.option_label)} : ${x.options.map(esc).join(', ')}`:''}</small></td>
   <td><div class="acts-row"><a class="btn ghost sm" href="boutique/produit.html?id=${x.id}" target="_blank" title="Voir sur le site">${ic('ext')}</a><a class="btn ghost sm" href="vendeuse/ajouter-produit.html?id=${x.id}">${ic('edit')}Modifier</a>
   <button type="button" class="btn ghost sm" data-t="${x.id}" data-v="${x.is_available}">${x.is_available?'Rendre indisponible':'Rendre disponible'}</button><button type="button" class="btn ghost sm" data-d="${x.id}" title="Supprimer" aria-label="Supprimer">${ic('trash')}</button></div></td></tr>`}).join('')+'</table></div>'
   :P.length?empty('box','Aucun produit ne correspond','Modifiez la recherche ou le filtre.')

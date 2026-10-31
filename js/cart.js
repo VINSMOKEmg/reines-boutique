@@ -1,9 +1,11 @@
+// Panier local : [{ id, qty, opt }]. Un même produit avec deux options différentes fait deux lignes.
 const K = 'reines_cart';
 export const get = () => { try { return JSON.parse(localStorage.getItem(K) || '[]'); } catch { return []; } };
 const save = c => { localStorage.setItem(K, JSON.stringify(c)); document.dispatchEvent(new Event('cart')); };
+export const key = i => i.id + '|' + (i.opt || '');
 export const count = () => get().reduce((a, i) => a + i.qty, 0);
-export function add(id, q = 1) { const c = get(), i = c.find(x => x.id === id); i ? i.qty = Math.min(99, i.qty + q) : c.push({ id, qty: q }); save(c); }
-export const setQty = (id, q) => save(get().map(i => i.id === id ? { ...i, qty: Math.min(99, q) } : i).filter(i => i.qty > 0));
+export function add(id, q = 1, opt = '') { const c = get(), i = c.find(x => key(x) === key({ id, opt })); i ? i.qty = Math.min(99, i.qty + q) : c.push({ id, qty: q, opt }); save(c); }
+export const setQty = (k, q) => save(get().map(i => key(i) === k ? { ...i, qty: Math.min(99, q) } : i).filter(i => i.qty > 0));
 export const clear = () => save([]);
 const fmt = n => Number(n).toLocaleString('fr-FR') + ' FCFA';
 // Numéro au format international sans +, espaces ni tirets.
@@ -15,7 +17,7 @@ export const waMessage = (o, x = {}) => [
   '',
   'Je souhaite commander sur *Les Reines de l’Entrepreneuriat* :',
   '',
-  ...o.items.map(i => `▪️ ${i.qty} × ${i.name} — ${fmt(i.qty * i.price)}`),
+  ...o.items.map(i => `▪️ ${i.qty} × ${i.name}${i.option ? ` (${i.option_label || 'Option'} : ${i.option})` : ''} — ${fmt(i.qty * i.price)}`),
   '',
   `*Total : ${fmt(o.total)}*`,
   `Référence : *${o.ref}*`,

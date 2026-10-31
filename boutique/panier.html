@@ -7,42 +7,135 @@
 <main id="app" class="w"><h1 id="t">Mon panier</h1><div id="c"></div></main>
 <footer class="foot" id="ftr"></footer></div></div>
 <script type="module">
-import {sb,me,requireRole} from './js/supabase.js';
+import { sb, me } from './js/supabase.js';
 import * as cart from './js/cart.js';
-import {$,esc,money,img,firstImg,toast,card,PSEL,header,seller,logout,ic,ICONS,favs,mini} from './js/ui.js';
-const user=await header();
+import { $, esc, money, img, firstImg, toast, PSEL, header } from './js/ui.js';
+await header();
 
-let rows=[];
-async function load(){const k=cart.get();
- if(!k.length){$('#c').innerHTML='<p>Votre panier est vide. <a class="lnk" href="boutique/catalogue.html">Voir le catalogue</a></p>';return}
- const {data,error}=await sb.from('products').select(PSEL).in('id',k.map(i=>i.id));
- if(error)return toast('Erreur de chargement du panier',1);
- k.filter(i=>!data.some(p=>p.id===i.id)).forEach(i=>cart.setQty(i.id,0));
- rows=k.map(i=>({...i,p:data.find(x=>x.id===i.id)})).filter(r=>r.p);draw()}
-function draw(){const t=rows.reduce((a,r)=>a+r.qty*r.p.price_fcfa,0);
- $('#c').innerHTML=rows.map(r=>`<div class="line"><img src="${img(firstImg(r.p))}" alt=""><div class="g"><b>${esc(r.p.name)}</b><br><small class="mut">${esc(r.p.seller_profiles.shop_name)} · ${money(r.p.price_fcfa)}</small>${r.p.is_available?'':'<br><small style="color:#b42318">Indisponible : à retirer</small>'}</div>
- <div class="q"><button data-q="${r.id}" data-d="-1" aria-label="Moins">−</button>${r.qty}<button data-q="${r.id}" data-d="1" aria-label="Plus">+</button></div><b>${money(r.qty*r.p.price_fcfa)}</b><button class="btn ghost sm" data-q="${r.id}" data-d="-99">Retirer</button></div>`).join('')
- +`<div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 14px"><button class="btn ghost sm" id="vd">Vider le panier</button><div style="font-size:16px">Total (${rows.reduce((a,r)=>a+r.qty,0)} articles) <b style="font:700 24px 'Playfair Display',serif;margin-left:10px">${money(t)}</b></div></div>
- <div class="box f cmd-info"><h3>Pour la vendeuse <small class="mut">(facultatif)</small></h3><p class="mut" style="margin:0 0 4px;font-size:13px">Ces précisions sont ajoutées à votre message WhatsApp : la vendeuse pourra vous répondre plus vite.</p>
- <div class="two"><label>Lieu de livraison<input id="lieu" maxlength="120" placeholder="Ex. Mermoz, Dakar" value="${esc(cart.lieu.get())}"></label><label>Précision<input id="note" maxlength="200" placeholder="Taille, couleur, créneau…"></label></div></div>
- <button class="btn pk" id="ok" style="width:100%;padding:14px">Valider ma commande</button>`;
- $('#t').textContent='Mon panier ('+rows.reduce((a,r)=>a+r.qty,0)+')';$('#vd').onclick=()=>{cart.clear();load()};$('#ok').onclick=validate}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(!b)return;const r=rows.find(x=>x.id===b.dataset.q);cart.setQty(r.id,r.qty+Number(b.dataset.d));load()});
-async function validate(){
- const u=await me();
- if(!u){location.href='compte/connexion.html?next=boutique/panier.html';return}
- if(rows.some(r=>!r.p.is_available))return toast('Retirez les produits indisponibles avant de valider.',1);
- const info={name:u.full_name||'',lieu:$('#lieu').value.trim(),note:$('#note').value.trim()};cart.lieu.set(info.lieu);
- const b=$('#ok');b.disabled=true;
- // Les prix sont recalculés côté serveur par la fonction place_order.
- const {data,error}=await sb.rpc('place_order',{items:rows.map(r=>({product_id:r.id,qty:r.qty}))});
- if(error){toast(error.message,1);b.disabled=false;return}
- cart.clear();done(data,info)}
-function done(o,info){$('#t').textContent='Commande enregistrée';
- $('#c').innerHTML=`<div class="note"><b>Dernière étape : envoyez votre commande sur WhatsApp${o.length>1?` à chacune des ${o.length} vendeuses`:''}.</b><br>Le message est déjà rédigé, il suffit d’appuyer sur « Envoyer » dans WhatsApp. La vendeuse vous confirmera ensuite la disponibilité et la livraison.</div>`
- +o.map(x=>{const msg=cart.waMessage(x,info);return `<div class="box"><h3>${esc(x.shop_name)}</h3><ul>${x.items.map(i=>`<li>${i.qty} × ${esc(i.name)} — ${money(i.qty*i.price)}</li>`).join('')}</ul><p>Total : <b>${money(x.total)}</b> · Référence <b>${esc(x.ref)}</b></p>
- ${x.whatsapp?`<a class="btn wapp" target="_blank" rel="noopener" href="${cart.waLink(x.whatsapp,msg)}">Envoyer ma commande à ${esc(x.shop_name)} sur WhatsApp</a>
- <details class="wa-prev"><summary>Voir le message</summary><pre>${esc(msg)}</pre></details>`:'<p class="mut">Cette vendeuse n’a pas encore renseigné son numéro WhatsApp : notez votre référence, l’administration vous mettra en relation.</p>'}</div>`}).join('')}
+// Lignes du panier : { id, qty, opt, k (clé produit + option), p (produit lu en base) }.
+let rows = [];
+const maxOf = p => (p.stock == null ? 99 : Math.min(99, p.stock)); // stock vide = illimité
+const qtyOf = id => rows.filter(r => r.id === id).reduce((a, r) => a + r.qty, 0); // quantité totale d'un produit
+const total = () => rows.reduce((a, r) => a + r.qty * r.p.price_fcfa, 0);
+const nb = () => rows.reduce((a, r) => a + r.qty, 0);
+
+async function load() {
+  const k = cart.get();
+  if (!k.length) {
+    $('#t').textContent = 'Mon panier';
+    $('#c').innerHTML = '<p>Votre panier est vide. <a class="lnk" href="boutique/catalogue.html">Voir le catalogue</a></p>';
+    return;
+  }
+  const { data, error } = await sb
+    .from('products')
+    .select(PSEL)
+    .in('id', [...new Set(k.map(i => i.id))]);
+  if (error) return toast('Erreur de chargement du panier', 1);
+  // Produits supprimés entre-temps : retirés du panier.
+  k.filter(i => !data.some(p => p.id === i.id)).forEach(i => cart.setQty(cart.key(i), 0));
+  rows = k.map(i => ({ ...i, k: cart.key(i), p: data.find(x => x.id === i.id) })).filter(r => r.p);
+  draw();
+}
+
+// Problème bloquant d'une ligne (indisponible, épuisé, option manquante, quantité > stock), ou ''.
+function issue(r) {
+  const p = r.p;
+  if (!p.is_available || p.stock === 0) return p.stock === 0 ? 'Épuisé : à retirer' : 'Indisponible : à retirer';
+  if (p.options?.length && !p.options.includes(r.opt))
+    return `Choisissez ${(p.option_label || 'une option').toLowerCase()} sur la fiche du produit`;
+  // Le stock vaut pour le produit entier, toutes options confondues (ex. taille M + taille L).
+  if (p.stock != null && qtyOf(p.id) > p.stock)
+    return `Seulement ${p.stock} en stock${rows.filter(x => x.id === p.id).length > 1 ? ' toutes options confondues' : ''} : réduisez la quantité`;
+  return '';
+}
+
+function draw() {
+  $('#c').innerHTML =
+    rows
+      .map(r => {
+        const pb = issue(r);
+        return `<div class="line"><img src="${img(firstImg(r.p))}" alt="">
+      <div class="g"><b>${esc(r.p.name)}</b>${r.opt ? ` <small class="mut">(${esc(r.p.option_label || 'Option')} : ${esc(r.opt)})</small>` : ''}<br>
+        <small class="mut">${esc(r.p.seller_profiles.shop_name)} · ${money(r.p.price_fcfa)}</small>${pb ? `<br><small style="color:#b42318">${pb}</small>` : ''}</div>
+      <div class="q"><button data-q="${esc(r.k)}" data-d="-1" aria-label="Moins">−</button>${r.qty}<button data-q="${esc(r.k)}" data-d="1" aria-label="Plus">+</button></div>
+      <b>${money(r.qty * r.p.price_fcfa)}</b><button class="btn ghost sm" data-q="${esc(r.k)}" data-d="-99">Retirer</button></div>`;
+      })
+      .join('') +
+    `<div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 14px"><button class="btn ghost sm" id="vd">Vider le panier</button>
+      <div style="font-size:16px">Total (${nb()} articles) <b style="font:700 24px 'Playfair Display',serif;margin-left:10px">${money(total())}</b></div></div>
+    <div class="box f cmd-info"><h3>Pour la vendeuse <small class="mut">(facultatif)</small></h3>
+      <p class="mut" style="margin:0 0 4px;font-size:13px">Ces précisions sont ajoutées à votre message WhatsApp : la vendeuse pourra vous répondre plus vite.</p>
+      <div class="two"><label>Lieu de livraison<input id="lieu" maxlength="120" placeholder="Ex. Mermoz, Dakar" value="${esc(cart.lieu.get())}"></label>
+      <label>Précision<input id="note" maxlength="200" placeholder="Créneau, détail…"></label></div></div>
+    <button class="btn pk" id="ok" style="width:100%;padding:14px">Valider ma commande</button>`;
+  $('#t').textContent = `Mon panier (${nb()})`;
+  $('#vd').onclick = () => {
+    cart.clear();
+    load();
+  };
+  $('#ok').onclick = validate;
+}
+
+// + / − / Retirer, plafonné au stock disponible.
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-q]');
+  if (!b) return;
+  const r = rows.find(x => x.k === b.dataset.q);
+  if (!r) return;
+  const d = Number(b.dataset.d),
+    max = maxOf(r.p);
+  if (d > 0 && (r.qty >= 99 || qtyOf(r.id) >= max))
+    return toast(r.p.stock != null ? `Seulement ${r.p.stock} en stock.` : 'Quantité maximale atteinte.', 1);
+  cart.setQty(r.k, r.qty + d);
+  load();
+});
+
+async function validate() {
+  const u = await me();
+  if (!u) {
+    location.href = 'compte/connexion.html?next=boutique/panier.html';
+    return;
+  }
+  const pb = rows.map(issue).find(Boolean);
+  if (pb) return toast('Corrigez le panier avant de valider : ' + pb.toLowerCase() + '.', 1);
+  const info = { name: u.full_name || '', lieu: $('#lieu').value.trim(), note: $('#note').value.trim() };
+  cart.lieu.set(info.lieu);
+  const b = $('#ok');
+  b.disabled = true;
+  // Prix, option et stock sont revérifiés côté serveur par place_order (qui décompte aussi le stock).
+  const { data, error } = await sb.rpc('place_order', {
+    items: rows.map(r => ({ product_id: r.id, qty: r.qty, option: r.opt || null }))
+  });
+  if (error) {
+    toast(error.message, 1);
+    b.disabled = false;
+    load();
+    return;
+  }
+  cart.clear();
+  done(data, info);
+}
+
+function done(o, info) {
+  $('#t').textContent = 'Commande enregistrée';
+  $('#c').innerHTML =
+    `<div class="note"><b>Dernière étape : envoyez votre commande sur WhatsApp${o.length > 1 ? ` à chacune des ${o.length} vendeuses` : ''}.</b><br>
+    Le message est déjà rédigé, il suffit d’appuyer sur « Envoyer » dans WhatsApp. La vendeuse vous confirmera ensuite la disponibilité et la livraison.</div>` +
+    o
+      .map(x => {
+        const msg = cart.waMessage(x, info);
+        return `<div class="box"><h3>${esc(x.shop_name)}</h3>
+      <ul>${x.items.map(i => `<li>${i.qty} × ${esc(i.name)}${i.option ? ` (${esc(i.option)})` : ''} — ${money(i.qty * i.price)}</li>`).join('')}</ul>
+      <p>Total : <b>${money(x.total)}</b> · Référence <b>${esc(x.ref)}</b></p>
+      ${
+        x.whatsapp
+          ? `<a class="btn wapp" target="_blank" rel="noopener" href="${cart.waLink(x.whatsapp, msg)}">Envoyer ma commande à ${esc(x.shop_name)} sur WhatsApp</a>
+      <details class="wa-prev"><summary>Voir le message</summary><pre>${esc(msg)}</pre></details>`
+          : '<p class="mut">Cette vendeuse n’a pas encore renseigné son numéro WhatsApp : notez votre référence, l’administration vous mettra en relation.</p>'
+      }</div>`;
+      })
+      .join('');
+}
+
 load();
-
 </script></body></html>

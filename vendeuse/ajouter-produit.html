@@ -25,9 +25,13 @@ $('#app').innerHTML=`<div class="form-layout"><div class="panel"><form id="f" cl
  <h2 class="sect">Le produit</h2>
  <label>Nom du produit<input name="name" required maxlength="120" value="${esc(p?.name||'')}"></label>
  <label>Description<span class="hint">Matière, taille, couleur, délai de fabrication… ce qui aide la cliente à choisir.</span><textarea name="description" rows="5" maxlength="2000">${esc(p?.description||'')}</textarea></label>
- <div class="two"><label>Prix (FCFA)<input type="number" name="price" required min="1" max="100000000" step="1" value="${p?.price_fcfa||''}"></label><label>Stock<input type="number" name="stock" min="0" step="1" value="${p?.stock??1}"></label></div>
+ <div class="two"><label>Prix (FCFA)<input type="number" name="price" required min="1" max="100000000" step="1" value="${p?.price_fcfa||''}"></label><label>Stock<span class="hint">Laissez vide si illimité (plats, services…).</span><input type="number" name="stock" min="0" step="1" placeholder="Illimité" value="${p?.stock??''}"></label></div>
  <label>Niche<select name="cat" required><option value="">Choisir…</option>${(cats||[]).map(c=>`<option value="${c.id}"${c.id===p?.category_id?' selected':''}>${esc(c.name)}</option>`).join('')}</select></label>
  <label class="switch"><input type="checkbox" name="av"${p&&!p.is_available?'':' checked'}> Disponible à la commande</label>
+ <h2 class="sect">Option (facultatif)</h2>
+ <p class="mut" style="margin:0;font-size:13px">Si la cliente doit choisir une taille, une couleur, un parfum… indiquez-le ici : elle choisira avant de commander.</p>
+ <div class="two"><label>Intitulé<input name="olabel" maxlength="30" placeholder="Ex. Taille" value="${esc(p?.option_label||'')}"></label>
+ <label>Choix possibles<span class="hint">Séparés par des virgules.</span><input name="ochoices" maxlength="400" placeholder="Ex. S, M, L, XL" value="${esc((p?.options||[]).join(', '))}"></label></div>
  <h2 class="sect">Photos</h2>
  <label>Ajouter des photos<span class="hint">JPG, PNG ou WebP, 3 Mo maximum chacune. La première photo est la photo principale.</span><input type="file" name="ph" multiple accept="image/jpeg,image/png,image/webp"></label>
  <div class="ph-grid" id="old">${im.map(i=>`<span><img src="${img(i.path)}" alt=""><button type="button" data-r="${i.id}" data-p="${esc(i.path)}" title="Retirer cette photo" aria-label="Retirer cette photo">${ic('close')}</button></span>`).join('')}</div>
@@ -48,7 +52,12 @@ f.onsubmit=async e=>{e.preventDefault();const bt=f.querySelector('button:not([ty
  try{const files=[...f.ph.files];for(const x of files)if(!IMG_OK(x))throw new Error('Image invalide : JPG, PNG ou WebP, 3 Mo maximum.');
   const price=Number(f.price.value);if(!Number.isInteger(price)||price<1)throw new Error('Prix invalide : un nombre entier de FCFA.');
   // seller_id n'est pas envoyé : il est imposé par la base (auth.uid()) et vérifié par RLS.
-  const v={name:f.name.value.trim(),description:f.description.value.trim(),price_fcfa:price,category_id:f.cat.value,stock:Number(f.stock.value)||0,is_available:f.av.checked};
+  const v={name:f.name.value.trim(),description:f.description.value.trim(),price_fcfa:price,category_id:f.cat.value,stock:f.stock.value===''?null:Math.max(0,Math.floor(Number(f.stock.value))),is_available:f.av.checked};
+  // Option : choix uniques, sans vide ; sans choix, pas d'option.
+  const ch=[...new Set(f.ochoices.value.split(',').map(x=>x.trim()).filter(Boolean))];
+  if(ch.length>20)throw new Error('20 choix au maximum pour une option.');
+  if(ch.length&&!f.olabel.value.trim())throw new Error('Donnez un intitulé à l’option (ex. Taille).');
+  v.option_label=ch.length?f.olabel.value.trim():null;v.options=ch.length?ch:null;
   const r=p?await sb.from('products').update(v).eq('id',p.id).select('id').single():await sb.from('products').insert(v).select('id').single();if(r.error)throw r.error;
   let pos=im.length;for(const x of files){const path=`${u.id}/${r.data.id}/${crypto.randomUUID()}.${x.type.split('/')[1]}`;
    const up=await sb.storage.from('shop-media').upload(path,x,{contentType:x.type});if(up.error)throw up.error;
