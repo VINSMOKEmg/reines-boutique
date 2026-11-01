@@ -110,22 +110,8 @@ export async function seller(active, { title = '', sub = '', actions = '' } = {}
     .then(({ count }) => { nNew = count || 0; badge(); });
   // Alertes : notification push (même site fermé, voir sw.js et la fonction notify-order) une fois activées ;
   // page ouverte, chaque nouvelle demande déclenche en plus un message et un son.
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register(ROOT + 'sw.js').catch(() => {});
   armSound();
-  const al = $('#alerts');
-  if (canPush() && Notification.permission === 'granted') subscribePush(); // abonnement renouvelé à chaque visite
-  else if (iosNeedsHomeScreen()) {
-    al.hidden = false;
-    al.onclick = () => toast('Sur iPhone : touchez Partager puis « Sur l’écran d’accueil », ouvrez Les Reines depuis l’icône et activez les alertes.');
-  } else if ('Notification' in window && Notification.permission === 'default') {
-    al.hidden = false;
-    al.onclick = async () => {
-      const r = await Notification.requestPermission(); al.hidden = true;
-      if (r !== 'granted') return toast('Alertes refusées : les commandes s’afficheront quand même ici.', 1);
-      toast(await subscribePush() ? 'Alertes activées : vous serez prévenue de chaque commande, même téléphone verrouillé.'
-        : 'Alertes activées tant que cette page est ouverte (notifications hors ligne indisponibles sur ce navigateur).');
-    };
-  }
+  setupAlerts($('#alerts'));
   sb.channel('commandes-' + u.id)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'seller_orders', filter: `seller_id=eq.${u.id}` }, ({ new: o }) => {
       nNew++; badge();
@@ -137,7 +123,28 @@ export async function seller(active, { title = '', sub = '', actions = '' } = {}
     .subscribe();
   return { u, shop };
 }
-// Notifications push : l'appareil s'abonne auprès du navigateur et l'abonnement est enregistré pour la vendeuse.
+// Bouton « Activer les alertes » (espace vendeuse et administration) : notification push à chaque commande,
+// même site fermé. Caché une fois les alertes acceptées ; l'abonnement est alors renouvelé à chaque visite.
+export function setupAlerts(al) {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register(ROOT + 'sw.js').catch(() => {});
+  if (canPush() && Notification.permission === 'granted') return subscribePush();
+  if (iosNeedsHomeScreen()) {
+    al.hidden = false;
+    al.onclick = () => toast('Sur iPhone : touchez Partager puis « Sur l’écran d’accueil », ouvrez Les Reines depuis l’icône et activez les alertes.');
+  } else if ('Notification' in window && Notification.permission === 'default') {
+    al.hidden = false;
+    al.onclick = async () => {
+      const r = await Notification.requestPermission(); al.hidden = true;
+      if (r !== 'granted') return toast('Alertes refusées : les commandes s’afficheront quand même ici.', 1);
+      toast(await subscribePush() ? 'Alertes activées : vous serez prévenue de chaque commande, même téléphone verrouillé.'
+        : 'Alertes activées tant que cette page est ouverte (notifications hors ligne indisponibles sur ce navigateur).');
+    };
+  } else if ('Notification' in window && Notification.permission === 'denied') {
+    al.hidden = false;
+    al.onclick = () => toast('Les notifications sont bloquées pour ce site : autorisez-les dans les réglages du navigateur (icône à gauche de l’adresse), puis rechargez la page.', 1);
+  }
+}
+// Notifications push : l'appareil s'abonne auprès du navigateur et l'abonnement est enregistré pour son compte.
 const canPush = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 // Sur iPhone, le push n'existe que pour le site ajouté à l'écran d'accueil et ouvert depuis son icône.
 const iosNeedsHomeScreen = () => /iPhone|iPad|iPod/.test(navigator.userAgent) && !navigator.standalone && !canPush();

@@ -1,4 +1,4 @@
-// Notification push « Nouvelle commande » envoyée aux appareils de la vendeuse.
+// Notification push « Nouvelle commande » envoyée aux appareils de la vendeuse et des administratrices.
 // Appelée par la base à chaque commande (trigger t_notify_new_order, migration 009) avec la clé publique du projet :
 // elle ne fait confiance qu'à l'identifiant reçu, relit tout en base, et n'envoie qu'une fois par commande récente.
 // Secret à définir (Supabase > Edge Functions > Secrets) : VAPID_PRIVATE_KEY. La clé publique est aussi dans js/config.js.
@@ -8,7 +8,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const VAPID_PUBLIC_KEY = "BCnBzMzHw_s0nU_oKyFkUiXYo6OaoIN_xv70TQvuMLmO4pdILB9DY1fOYQnOwHKsccHmYX-7G0-j5pP093Ca1rE";
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { "Content-Type": "application/json" } });
-const fcfa = (n: number) => n.toLocaleString("fr-FR").replace(/ | /g, " ") + " FCFA";
+const fcfa = (n: number) => n.toLocaleString("fr-FR").replace(/\u202f|\u00a0/g, " ") + " FCFA";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST attendu" }, 405);
@@ -27,14 +27,22 @@ Deno.serve(async (req) => {
   if (error) return json({ error: error.message }, 500);
   if (!o) return json({ sent: 0, info: "Commande introuvable, ancienne ou déjà notifiée" });
 
-  const { data: subs } = await sb.from("push_subscriptions").select("endpoint,p256dh,auth").eq("user_id", o.seller_id);
-  const payload = JSON.stringify({ title: "Nouvelle commande", body: `${o.ref} · ${fcfa(o.total)}`, tag: o.ref, url: "vendeuse/mes-commandes.html" });
+  // Destinataires : la vendeuse de la commande, et les administratrices (toutes boutiques, avec le nom de la boutique).
+  const [{ data: shop }, { data: admins }] = await Promise.all([
+    sb.from("seller_profiles").select("shop_name").eq("id", o.seller_id).maybeSingle(),
+    sb.from("profiles").select("id").eq("role", "admin")]);
+  const adminIds = (admins ?? []).map((a) => a.id).filter((id) => id !== o.seller_id);
+  const { data: subs } = await sb.from("push_subscriptions").select("endpoint,p256dh,auth,user_id").in("user_id", [o.seller_id, ...adminIds]);
+  const body = `${o.ref} · ${fcfa(o.total)}`;
+  const forSeller = JSON.stringify({ title: "Nouvelle commande", body, tag: o.ref, url: "vendeuse/mes-commandes.html" });
+  const forAdmin = JSON.stringify({ title: `Nouvelle commande · ${shop?.shop_name ?? "boutique"}`, body, tag: o.ref, url: "admin/index.html" });
   const res = await Promise.allSettled((subs ?? []).map((s) =>
-    webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 86400, urgency: "high" })));
+    webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+      s.user_id === o.seller_id ? forSeller : forAdmin, { TTL: 86400, urgency: "high" })));
 
   // Appareils désabonnés ou expirés : retirés de la liste.
   const dead = res.flatMap((r, i) => r.status === "rejected" && [404, 410].includes((r.reason as { statusCode?: number })?.statusCode ?? 0) ? [subs![i].endpoint] : []);
   if (dead.length) await sb.from("push_subscriptions").delete().in("endpoint", dead);
   const failed = res.flatMap((r) => r.status === "rejected" ? [String((r.reason as { statusCode?: number; body?: string })?.statusCode ?? (r.reason as Error)?.message)] : []);
-  return json({ sent: res.length - failed.length, failed, removed: dead.length });
+  return json({ sent: res.length - failed.length, failed, removed: dead.length, admins: adminIds.length });
 });

@@ -13,6 +13,7 @@
   <div class="app-side-foot">
    <a href="index.html" target="_blank" title="Voir le site"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg><span class="lbl">Voir le site</span></a>
    <a href="compte/client.html" title="Mes achats"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span class="lbl">Mes achats</span></a>
+   <button type="button" id="alerts" title="Alertes de commande" hidden><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg><span class="lbl">Activer les alertes</span></button>
    <div class="app-user" id="me"></div>
    <button type="button" id="lo" title="Déconnexion"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span class="lbl">Déconnexion</span></button>
   </div>
@@ -25,7 +26,7 @@
 <dialog id="dl"><form class="f" id="df"></form></dialog>
 <script type="module">
 import {sb,requireRole} from './js/supabase.js';
-import {$,esc,money,img,toast,logout,ic,ICONS,normPhone,PHONE_ERR,statusSelect,itemTxt,stockTxt} from './js/ui.js';
+import {$,esc,money,img,toast,logout,ic,ICONS,normPhone,PHONE_ERR,statusSelect,itemTxt,stockTxt,setupAlerts} from './js/ui.js';
 const a=await requireRole(['admin']);if(!a)throw 0;
 
 const CAT_ICONS=Object.keys(ICONS).slice(0,16);  // les 16 premières icônes sont celles des niches
@@ -53,6 +54,7 @@ const ACTIONS={
 $('#nav').innerHTML=Object.entries(TABS).map(([k,[l,i]])=>`<a href="#${k}" data-tab="${k}">${ic(i)}<span>${l}</span><i class="nb" id="nb-${k}" hidden></i></a>`).join('');
 $('#me').innerHTML=`<span class="av">${esc((a.full_name||a.email||'A')[0].toUpperCase())}</span><span><b>${esc(a.full_name||'Administratrice')}</b><small>${esc(a.email||'')}</small></span>`;
 $('#lo').onclick=logout;
+setupAlerts($('#alerts')); // notification push à chaque commande, toutes boutiques confondues
 
 $('#app').innerHTML=`
 <section data-tab="accueil"><div class="kpis" id="kp"></div><div id="start"></div>
