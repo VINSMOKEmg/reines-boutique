@@ -1,0 +1,17 @@
+{
+  "id": "/vendeuse/",
+  "name": "Les Reines — Espace vendeuse",
+  "short_name": "Les Reines",
+  "description": "Espace vendeuse des Reines de l’Entrepreneuriat : commandes et alertes.",
+  "lang": "fr",
+  "start_url": "/vendeuse/dashboard.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fbf5ed",
+  "theme_color": "#6a1233",
+  "icons": [
+    { "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
