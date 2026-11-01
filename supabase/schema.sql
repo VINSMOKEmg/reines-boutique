@@ -52,12 +52,17 @@ create table order_items (
 create index on products(seller_id); create index on products(category_id);
 create index on product_images(product_id); create index on orders(client_id);
 create index on seller_orders(seller_id); create index on seller_orders(order_id); create index on order_items(seller_order_id);
+create index order_items_product_id_idx on order_items(product_id);
 
 insert into categories(name,icon) values ('Mode & Prêt-à-porter','shirt'),('Bijoux & Accessoires','gem'),('Sacs & Maroquinerie','bag'),('Couture & Tissus','ruler'),('Beauté & Soins','sparkles'),('Cosmétiques naturels','droplet'),('Coiffure & Perruques','scissors'),('Maison & Déco','home'),('Alimentation & Épicerie','utensils'),('Pâtisserie & Traiteur','cake'),('Boissons & Jus','cup'),('Artisanat','palette'),('Enfants & Bébé','smile'),('Bien-être & Santé','heart'),('Cadeaux & Événements','gift'),('Services','briefcase');
 
--- Fonctions de rôle
-create function is_admin() returns boolean language sql stable security definer set search_path=public as
+-- Fonctions de rôle : is_admin vit dans le schéma « private », non exposé par l'API (/rest/v1/rpc/).
+-- Les règles d'accès l'appellent avec les droits du visiteur : anon et authenticated doivent pouvoir l'exécuter.
+create schema if not exists private;
+grant usage on schema private to anon, authenticated;
+create function private.is_admin() returns boolean language sql stable security definer set search_path=public as
 $$ select exists(select 1 from profiles where id=auth.uid() and role='admin') $$;
+revoke execute on function private.is_admin() from public; grant execute on function private.is_admin() to anon, authenticated;
 
 -- Création automatique du profil : le rôle est TOUJOURS 'client' à l'inscription.
 -- Le numéro saisi est nettoyé ; s'il est invalide il est ignoré (une erreur ici bloquerait l'inscription).
@@ -82,13 +87,13 @@ create trigger profiles_role_seller after update of role on profiles for each ro
 
 -- Protection : un utilisateur ne peut jamais changer son rôle, son statut ou l'approbation d'un produit.
 -- (auth.uid() est null dans le SQL Editor : c'est ainsi que l'on crée le tout premier admin.)
-create function guard_profiles() returns trigger language plpgsql as $$
+create function guard_profiles() returns trigger language plpgsql set search_path=public,private as $$
 begin if new.role<>old.role and auth.uid() is not null and not is_admin() and coalesce(current_setting('app.bypass',true),'')<>'1' then raise exception 'Modification du rôle interdite'; end if; return new; end $$;
 create trigger t_guard_profiles before update on profiles for each row execute function guard_profiles();
-create function guard_sellers() returns trigger language plpgsql as $$
+create function guard_sellers() returns trigger language plpgsql set search_path=public,private as $$
 begin if new.status<>old.status and auth.uid() is not null and not is_admin() then raise exception 'Modification du statut interdite'; end if; return new; end $$;
 create trigger t_guard_sellers before update on seller_profiles for each row execute function guard_sellers();
-create function guard_products() returns trigger language plpgsql as $$
+create function guard_products() returns trigger language plpgsql set search_path=public,private as $$
 begin
   if auth.uid() is not null and not is_admin() then
     if tg_op='INSERT' then new.is_approved:=true;
@@ -101,7 +106,7 @@ create trigger t_guard_products before insert or update on products for each row
 
 -- Promotion d'un compte (réservée à l'administrateur).
 create function admin_set_role(target_email text, new_role user_role) returns void
-language plpgsql security definer set search_path=public as $$
+language plpgsql security definer set search_path=public,private as $$
 begin
   if not is_admin() then raise exception 'Réservé à l''administrateur'; end if;
   -- Recherche par l'e-mail réel (auth.users), jamais par la copie de profiles.
@@ -181,6 +186,12 @@ begin
 end $$;
 create trigger t_restock after update of status on seller_orders for each row execute function restock_on_cancel();
 
+-- Fonctions de trigger : elles n'ont pas à être appelables par l'API.
+revoke execute on function handle_new_user()    from public, anon, authenticated;
+revoke execute on function sync_profile_email() from public, anon, authenticated;
+revoke execute on function on_role_change()     from public, anon, authenticated;
+revoke execute on function restock_on_cancel()  from public, anon, authenticated;
+
 -- Alertes en direct : les nouvelles demandes sont diffusées à l'espace vendeuse (Realtime, filtré par RLS).
 do $$ begin
   alter publication supabase_realtime add table seller_orders;
@@ -193,33 +204,44 @@ alter table categories enable row level security; alter table products enable ro
 alter table product_images enable row level security; alter table orders enable row level security;
 alter table seller_orders enable row level security; alter table order_items enable row level security;
 
-create policy profiles_read on profiles for select using (id=auth.uid() or is_admin());
-create policy profiles_update on profiles for update using (id=auth.uid() or is_admin());
+-- (select auth.uid()) et (select private.is_admin()) : calculés une fois par requête au lieu d'une fois par ligne.
+create policy profiles_read on profiles for select using (id=(select auth.uid()) or (select private.is_admin()));
+create policy profiles_update on profiles for update using (id=(select auth.uid()) or (select private.is_admin()));
 -- Seul le nom est modifiable depuis le site : l'e-mail (copie d'auth.users) et le numéro (fixé à l'inscription, sert à reconnaître
 -- les membres et à connecter les vendeuses) ne doivent pas pouvoir être usurpés. Le WhatsApp de boutique se modifie dans seller_profiles.
 revoke update on profiles from authenticated, anon; grant update(full_name) on profiles to authenticated;
 
-create policy sellers_read on seller_profiles for select using (status='active' or id=auth.uid() or is_admin());
-create policy sellers_update on seller_profiles for update using (id=auth.uid() or is_admin());
+create policy sellers_read on seller_profiles for select using (status='active' or id=(select auth.uid()) or (select private.is_admin()));
+create policy sellers_update on seller_profiles for update using (id=(select auth.uid()) or (select private.is_admin()));
 
+-- Écriture découpée (insert / update / delete) pour ne pas doubler la règle de lecture.
 create policy cat_read on categories for select using (true);
-create policy cat_admin on categories for all using (is_admin()) with check (is_admin());
+create policy cat_admin_insert on categories for insert with check ((select private.is_admin()));
+create policy cat_admin_update on categories for update using ((select private.is_admin())) with check ((select private.is_admin()));
+create policy cat_admin_delete on categories for delete using ((select private.is_admin()));
 
 create policy prod_read on products for select using (
-  (is_approved and exists(select 1 from seller_profiles s where s.id=seller_id and s.status='active')) or seller_id=auth.uid() or is_admin());
+  (is_approved and exists(select 1 from seller_profiles s where s.id=seller_id and s.status='active'))
+  or seller_id=(select auth.uid()) or (select private.is_admin()));
 create policy prod_insert on products for insert with check (
-  seller_id=auth.uid() and exists(select 1 from seller_profiles s where s.id=auth.uid() and s.status='active'));
-create policy prod_update on products for update using (seller_id=auth.uid() or is_admin());
-create policy prod_delete on products for delete using (seller_id=auth.uid() or is_admin());
+  seller_id=(select auth.uid()) and exists(select 1 from seller_profiles s where s.id=(select auth.uid()) and s.status='active'));
+create policy prod_update on products for update using (seller_id=(select auth.uid()) or (select private.is_admin()));
+create policy prod_delete on products for delete using (seller_id=(select auth.uid()) or (select private.is_admin()));
 
 create policy img_read on product_images for select using (exists(select 1 from products p where p.id=product_id));
-create policy img_write on product_images for all
-  using (exists(select 1 from products p where p.id=product_id and (p.seller_id=auth.uid() or is_admin())))
-  with check (exists(select 1 from products p where p.id=product_id and (p.seller_id=auth.uid() or is_admin())));
+create policy img_insert on product_images for insert with check (
+  exists(select 1 from products p where p.id=product_id and (p.seller_id=(select auth.uid()) or (select private.is_admin()))));
+create policy img_update on product_images for update
+  using (exists(select 1 from products p where p.id=product_id and (p.seller_id=(select auth.uid()) or (select private.is_admin()))))
+  with check (exists(select 1 from products p where p.id=product_id and (p.seller_id=(select auth.uid()) or (select private.is_admin()))));
+create policy img_delete on product_images for delete using (
+  exists(select 1 from products p where p.id=product_id and (p.seller_id=(select auth.uid()) or (select private.is_admin()))));
 
-create policy orders_read on orders for select using (client_id=auth.uid() or is_admin());
-create policy so_read on seller_orders for select using (seller_id=auth.uid() or is_admin() or exists(select 1 from orders o where o.id=order_id and o.client_id=auth.uid()));
-create policy so_update on seller_orders for update using (seller_id=auth.uid() or is_admin());
+create policy orders_read on orders for select using (client_id=(select auth.uid()) or (select private.is_admin()));
+create policy so_read on seller_orders for select using (
+  seller_id=(select auth.uid()) or (select private.is_admin())
+  or exists(select 1 from orders o where o.id=order_id and o.client_id=(select auth.uid())));
+create policy so_update on seller_orders for update using (seller_id=(select auth.uid()) or (select private.is_admin()));
 revoke update on seller_orders from authenticated, anon; grant update(status) on seller_orders to authenticated;  -- seule la colonne "status" est modifiable
 create policy oi_read on order_items for select using (exists(select 1 from seller_orders so where so.id=seller_order_id));
 
@@ -227,9 +249,9 @@ create policy oi_read on order_items for select using (exists(select 1 from sell
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
 values ('shop-media','shop-media',true,3145728,array['image/jpeg','image/png','image/webp']) on conflict (id) do nothing;
 create policy media_read on storage.objects for select using (bucket_id='shop-media');
-create policy media_insert on storage.objects for insert to authenticated with check (bucket_id='shop-media' and ((storage.foldername(name))[1]=auth.uid()::text and exists(select 1 from seller_profiles where id=auth.uid()) or is_admin()));
-create policy media_update on storage.objects for update to authenticated using (bucket_id='shop-media' and ((storage.foldername(name))[1]=auth.uid()::text or is_admin()));
-create policy media_delete on storage.objects for delete to authenticated using (bucket_id='shop-media' and ((storage.foldername(name))[1]=auth.uid()::text or is_admin()));
+create policy media_insert on storage.objects for insert to authenticated with check (bucket_id='shop-media' and ((storage.foldername(name))[1]=auth.uid()::text and exists(select 1 from seller_profiles where id=auth.uid()) or private.is_admin()));
+create policy media_update on storage.objects for update to authenticated using (bucket_id='shop-media' and ((storage.foldername(name))[1]=auth.uid()::text or private.is_admin()));
+create policy media_delete on storage.objects for delete to authenticated using (bucket_id='shop-media' and ((storage.foldername(name))[1]=auth.uid()::text or private.is_admin()));
 
 -- MEMBRES DU GROUPE : liste gérée par l'admin, identifiée en priorité par le numéro WhatsApp (e-mail facultatif).
 create table member_whitelist (id uuid primary key default gen_random_uuid(),
@@ -240,7 +262,7 @@ create table member_whitelist (id uuid primary key default gen_random_uuid(),
 create unique index member_whitelist_phone_key on member_whitelist(phone) where phone is not null;
 create index profiles_phone_idx on profiles(phone);
 alter table member_whitelist enable row level security;
-create policy mw_admin on member_whitelist for all using (is_admin()) with check (is_admin());
+create policy mw_admin on member_whitelist for all using (private.is_admin()) with check (private.is_admin());
 
 -- Appelée à chaque connexion : un compte dont le numéro (ou l'e-mail) figure dans la liste renvoie 'pending'.
 -- C'est l'admin qui valide ensuite (admin_activate_seller) : le numéro saisi à l'inscription n'est pas vérifié par SMS.
@@ -256,7 +278,7 @@ end $$;
 revoke execute on function claim_membership() from public, anon; grant execute on function claim_membership() to authenticated;
 
 -- Validation par l'admin d'un compte inscrit avec le numéro d'une membre : la boutique est créée (trigger on_role_change).
-create function admin_activate_seller(target uuid) returns void language plpgsql security definer set search_path=public as $$
+create function admin_activate_seller(target uuid) returns void language plpgsql security definer set search_path=public,private as $$
 begin
   if not is_admin() then raise exception 'Réservé à l''administrateur'; end if;
   update profiles set role='seller' where id=target and role='client';
@@ -271,6 +293,19 @@ create function seller_login_email(p text) returns text language sql stable secu
   select u.email from profiles pr join auth.users u on u.id=pr.id
   where pr.phone=regexp_replace(coalesce(p,''),'\D','','g') and pr.role='seller' order by pr.created_at limit 1 $$;
 revoke execute on function seller_login_email(text) from public; grant execute on function seller_login_email(text) to anon, authenticated;
+
+-- PANIER DU COMPTE : il suit la cliente d'un appareil à l'autre. Contenu [{ id, qty, opt }] non garanti : place_order revérifie tout.
+create table carts (
+  user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+  items jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(items) = 'array' and jsonb_array_length(items) <= 100 and pg_column_size(items) < 20000),
+  updated_at timestamptz not null default now());
+alter table carts enable row level security;
+revoke all on carts from anon;
+create policy carts_read on carts for select to authenticated using (user_id=(select auth.uid()));
+create policy carts_insert on carts for insert to authenticated with check (user_id=(select auth.uid()));
+create policy carts_update on carts for update to authenticated using (user_id=(select auth.uid())) with check (user_id=(select auth.uid()));
+create policy carts_delete on carts for delete to authenticated using (user_id=(select auth.uid()));
 
 -- PREMIER ADMINISTRATEUR : après avoir créé votre compte sur le site, exécutez (en remplaçant l'e-mail) :
 -- update profiles set role='admin' where id=(select id from auth.users where lower(email)=lower('votre@email.com'));

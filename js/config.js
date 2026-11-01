@@ -5,4 +5,4 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Numéro WhatsApp affiché sur la page Contact (format international sans +).
 export const CONTACT_WHATSAPP = '221775921070';
 // true : affiche des exemples (comme l'aperçu) tant qu'il n'y a aucun produit ni boutique. Mettre false pour les masquer.
-export const DEMO_WHEN_EMPTY = true;
+export const DEMO_WHEN_EMPTY = false;
