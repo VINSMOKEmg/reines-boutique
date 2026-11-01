@@ -8,17 +8,39 @@
 <footer class="foot" id="ftr"></footer></div></div>
 <script type="module">
 import { sb } from './js/supabase.js';
-import { $, esc, img, card, PSEL, header } from './js/ui.js';
+import { $, esc, img, ic, card, PSEL, header } from './js/ui.js';
+import { waLink } from './js/cart.js';
 await header();
 
 const id = new URLSearchParams(location.search).get('id');
 const { data: s } = await sb.from('seller_profiles').select('*').eq('id', id).maybeSingle();
 if (!s) {
-  $('#app').innerHTML = '<p>Boutique introuvable.</p>';
+  $('#app').innerHTML = '<p>Boutique introuvable. <a class="lnk" href="boutique/vendeuses.html">Voir toutes les vendeuses</a></p>';
   throw 0;
 }
-const { data: p } = await sb.from('products').select(PSEL).eq('seller_id', id).eq('is_approved', true);
-$('#app').innerHTML =
-  `<div class="cover" style="${s.cover_path ? `background-image:url(${img(s.cover_path)})` : ''}"></div><div class="sprof">${s.logo_path ? `<img class="av" src="${img(s.logo_path)}" alt="">` : `<div class="av">${esc(s.shop_name[0])}</div>`}<div><h1 style="margin:0">${esc(s.shop_name)}</h1><span class="mut">${esc(s.location || '')}</span></div></div>
-<p style="white-space:pre-line">${esc(s.description || '')}</p>${s.hours ? `<p class="mut">Horaires : ${esc(s.hours)}</p>` : ''}<h2>Produits</h2><div class="prods">${(p || []).map(card).join('') || '<p class="mut">Aucun produit publié pour le moment.</p>'}</div>`;
+const { data: p } = await sb.from('products').select(PSEL).eq('seller_id', id).eq('is_approved', true).order('created_at', { ascending: false });
+const P = p || [];
+document.title = `${s.shop_name} — Les Reines de l’Entrepreneuriat`;
+
+// Bannière affichée en entier (quel que soit son format) sur un fond flouté de la même image.
+const cover = s.cover_path
+  ? `<div class="shop-cover"><div class="shop-cover-bg" style="background-image:url(${img(s.cover_path)})"></div><img src="${img(s.cover_path)}" alt=""></div>`
+  : '<div class="shop-cover shop-cover-empty"></div>';
+const meta = [
+  s.location && [ic('store'), esc(s.location)],
+  s.hours && [ic('clock'), esc(s.hours)],
+  [ic('box'), `${P.length} produit${P.length > 1 ? 's' : ''}`]
+].filter(Boolean);
+const wa = s.whatsapp ? waLink(s.whatsapp, `Bonjour ${s.shop_name}, je vous écris depuis Les Reines de l’Entrepreneuriat.`) : '';
+
+$('#app').innerHTML = `<section class="shop-hero">${cover}
+  <div class="shop-head">
+    ${s.logo_path ? `<img class="av" src="${img(s.logo_path)}" alt="">` : `<div class="av">${esc(s.shop_name[0])}</div>`}
+    <div class="shop-id"><h1>${esc(s.shop_name)}</h1><div class="shop-meta">${meta.map(([i, t]) => `<span>${i}${t}</span>`).join('')}</div></div>
+    ${wa ? `<a class="btn wapp shop-wa" href="${wa}" target="_blank" rel="noopener">${ic('chat')}Écrire à la boutique</a>` : ''}
+  </div>
+  ${s.description ? `<p class="shop-desc">${esc(s.description)}</p>` : ''}
+</section>
+<div class="sh"><h2>Produits</h2><span class="mut">${P.length} produit${P.length > 1 ? 's' : ''}</span></div>
+<div class="prods">${P.map(card).join('') || '<p class="mut">Aucun produit publié pour le moment.</p>'}</div>`;
 </script></body></html>

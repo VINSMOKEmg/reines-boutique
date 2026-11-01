@@ -4,17 +4,31 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body>
 <div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
-<div class="w"><h1>Contact</h1><p>Une question ? Écrivez-nous sur WhatsApp.</p><a class="btn wapp" id="wa" target="_blank" rel="noopener" style="width:auto;padding:12px 22px">Écrire sur WhatsApp</a></div>
+<main class="w"><span class="eyebrow">Contact</span><h1>Parlons-en sur WhatsApp</h1>
+<p class="lead">Une question sur une commande, une boutique ou le fonctionnement du site ? L’équipe vous répond directement sur WhatsApp.</p>
+<div class="info-grid">
+ <article class="icard"><span class="ibox"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg></span>
+  <h2>Nous écrire</h2><p>Pour toute question sur le site ou pour joindre l’administration.</p><p class="big-num" id="num"></p>
+  <a class="btn wapp" id="wa" target="_blank" rel="noopener">Écrire sur WhatsApp</a></article>
+ <article class="icard"><span class="ibox"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9l1-5h14l1 5"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9"/><path d="M5 12v8h14v-8"/><path d="M10 20v-5h4v5"/></svg></span>
+  <h2>Devenir vendeuse</h2><p>La boutique est réservée aux membres du groupe. Pour ouvrir la vôtre :</p>
+  <ol class="nsteps"><li>Envoyez votre numéro WhatsApp à l’administration.</li><li>Créez votre compte sur le site avec ce même numéro.</li><li>L’administration valide : votre boutique s’ouvre.</li></ol>
+  <p class="row"><a class="btn sm" id="wa2" target="_blank" rel="noopener">Demander mon ajout</a><a class="btn ghost sm" href="compte/inscription.html">Créer mon compte</a></p></article>
+ <article class="icard"><span class="ibox"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><path d="M10 21h.01"/><path d="M18 21h.01"/></svg></span>
+  <h2>Une commande ?</h2><p>Pour la disponibilité, la livraison ou le paiement, écrivez directement à la vendeuse sur WhatsApp en rappelant votre référence (CMD-…).</p>
+  <p><a class="lnk" href="compte/client.html">Retrouver mes commandes →</a></p></article>
+</div></main>
 <footer class="foot" id="ftr"></footer></div></div>
 <script type="module">
 import { $, header } from './js/ui.js';
 await header();
 
 import { CONTACT_WHATSAPP } from './js/config.js';
-// Message de départ prérempli, pour que la conversation ne s'ouvre pas vide.
-$('#wa').href =
-  'https://wa.me/' +
-  String(CONTACT_WHATSAPP).replace(/\D/g, '') +
-  '?text=' +
-  encodeURIComponent('Bonjour, je vous écris depuis le site Les Reines de l’Entrepreneuriat. ');
+const num = String(CONTACT_WHATSAPP).replace(/\D/g, '');
+const wa = text => 'https://wa.me/' + num + '?text=' + encodeURIComponent(text);
+// Numéro lisible : +221 77 592 10 70 (format sénégalais), sinon +indicatif tel quel.
+$('#num').textContent = /^221\d{9}$/.test(num) ? `+221 ${num.slice(3, 5)} ${num.slice(5, 8)} ${num.slice(8, 10)} ${num.slice(10)}` : '+' + num;
+// Messages de départ préremplis, pour que la conversation ne s'ouvre pas vide.
+$('#wa').href = wa('Bonjour, je vous écris depuis le site Les Reines de l’Entrepreneuriat. ');
+$('#wa2').href = wa('Bonjour, je suis membre du groupe et je souhaite ouvrir ma boutique sur Les Reines de l’Entrepreneuriat. Mon nom : ');
 </script></body></html>
