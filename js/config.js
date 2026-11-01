@@ -6,3 +6,5 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 export const CONTACT_WHATSAPP = '221775921070';
 // true : affiche des exemples (comme l'aperçu) tant qu'il n'y a aucun produit ni boutique. Mettre false pour les masquer.
 export const DEMO_WHEN_EMPTY = false;
+// Clé publique des notifications push (VAPID). La clé privée correspondante est le secret VAPID_PRIVATE_KEY de la fonction notify-order.
+export const VAPID_PUBLIC_KEY = 'BCnBzMzHw_s0nU_oKyFkUiXYo6OaoIN_xv70TQvuMLmO4pdILB9DY1fOYQnOwHKsccHmYX-7G0-j5pP093Ca1rE';

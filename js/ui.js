@@ -1,4 +1,5 @@
 import { sb, me, requireRole, here, ROOT } from './supabase.js';
+import { VAPID_PUBLIC_KEY } from './config.js';
 import * as cart from './cart.js';
 export const ICONS = {"shirt": ["M20.4 3.5 16 2a4 4 0 0 1-8 0L3.6 3.5a2 2 0 0 0-1.3 2.2l.6 3.5a1 1 0 0 0 1 .8H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.1a1 1 0 0 0 1-.8l.6-3.5a2 2 0 0 0-1.3-2.2z"], "gem": ["M6 3h12l4 6-10 13L2 9z", "M11 3 8 9l4 13 4-13-3-6", "M2 9h20"], "bag": ["M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z", "M3 6h18", "M16 10a4 4 0 0 1-8 0"], "ruler": ["M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0z", "M14.5 12.5l2-2", "M11.5 9.5l2-2", "M8.5 6.5l2-2", "M17.5 15.5l2-2"], "sparkles": ["M9.9 15.5A2 2 0 0 0 8.5 14.1l-6.1-1.6a.5.5 0 0 1 0-1L8.5 9.9A2 2 0 0 0 9.9 8.5l1.6-6.1a.5.5 0 0 1 1 0l1.6 6.1a2 2 0 0 0 1.4 1.4l6.1 1.6a.5.5 0 0 1 0 1l-6.1 1.6a2 2 0 0 0-1.4 1.4l-1.6 6.1a.5.5 0 0 1-1 0z"], "droplet": ["M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"], "scissors": ["M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M20 4 8.1 15.9", "M14.5 14.5 20 20", "M8.1 8.1 12 12"], "home": ["M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"], "utensils": ["M3 2v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V2", "M7 2v20", "M21 15V2a5 5 0 0 0-5 5v6a2 2 0 0 0 2 2h3zm0 0v7"], "cake": ["M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8", "M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1", "M2 21h20", "M7 8v3", "M12 8v3", "M17 8v3", "M7 4h.01", "M12 4h.01", "M17 4h.01"], "cup": ["M10 2v2", "M14 2v2", "M6 2v2", "M16 8h1a4 4 0 1 1 0 8h-1", "M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"], "palette": ["M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.3a1.7 1.7 0 0 0-1.4 2.8l.3.4a1.7 1.7 0 0 1-1.4 2.8z", "M13.5 6.5h.01", "M17.5 10.5h.01", "M6.5 12.5h.01", "M8.5 7.5h.01"], "smile": ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M8 14s1.5 2 4 2 4-2 4-2", "M9 9h.01", "M15 9h.01"], "heart": ["M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"], "gift": ["M20 12v10H4V12", "M2 7h20v5H2z", "M12 22V7", "M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z", "M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"], "briefcase": ["M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16", "M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"], "search": ["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z", "M21 21l-4.3-4.3"], "user": ["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M4 21a8 8 0 0 1 16 0"], "cart": ["M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6", "M10 21h.01", "M18 21h.01"], "shield": ["M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z", "M8.5 12l2.5 2.5 4.5-5"], "chat": ["M7.9 20A9 9 0 1 0 4 16.1L2 22z","M8 12h.01","M12 12h.01","M16 12h.01"], "crown": ["M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"], "store": ["M4 9l1-5h14l1 5", "M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9", "M5 12v8h14v-8", "M10 20v-5h4v5"], "box": ["M21 8l-9-5-9 5v8l9 5 9-5z", "M3.3 7.5 12 12.5l8.7-5", "M12 22V12.5"], "truck": ["M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2","M15 18H9","M19 18h2a1 1 0 0 0 1-1v-3.6a1 1 0 0 0-.2-.6l-3.5-4.4A1 1 0 0 0 17.5 8H14","M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4z","M17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"], "wallet": ["M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1","M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"], "clock": ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z","M12 7v5l3 2"], "menu": ["M4 6h16","M4 12h16","M4 18h16"], "close": ["M6 6l12 12","M18 6 6 18"], "dots": ["M5 12h.01", "M12 12h.01", "M19 12h.01"], "check": ["M20 6 9 17l-5-5"], "plus": ["M12 5v14","M5 12h14"], "ext": ["M15 3h6v6","M10 14 21 3","M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"], "edit": ["M12 20h9","M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"], "trash": ["M3 6h18","M8 6V4h8v2","M19 6l-1 14H6L5 6"], "out": ["M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4","M16 17l5-5-5-5","M21 12H9"]};
 export const ic = n => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${(ICONS[n]||ICONS.dots).map(d => `<path d="${d}"/>`).join('')}</svg>`;
@@ -18,7 +19,7 @@ export const money = n => Number(n).toLocaleString('fr-FR') + ' FCFA';
 export const img = p => p ? sb.storage.from('shop-media').getPublicUrl(p).data.publicUrl : 'assets/placeholder.svg';
 export const firstImg = p => [...(p.product_images || [])].sort((a, b) => a.position - b.position)[0]?.path;
 export function toast(m, err) { const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = m; document.body.append(t); setTimeout(() => t.remove(), 3500); }
-export const logout = () => sb.auth.signOut().then(() => location.href = 'index.html');
+export const logout = async () => { await unsubscribePush(); await sb.auth.signOut(); location.href = 'index.html'; };
 
 export async function header() {
   let u = null; try { u = await me(); } catch {}
@@ -107,14 +108,23 @@ export async function seller(active, { title = '', sub = '', actions = '' } = {}
   const badge = () => { const el = $('#nb-cmd'); if (el) { el.textContent = nNew; el.hidden = !nNew; } };
   sb.from('seller_orders').select('id', { count: 'exact', head: true }).eq('seller_id', u.id).eq('status', 'nouvelle')
     .then(({ count }) => { nNew = count || 0; badge(); });
-  // Alertes en direct : chaque nouvelle demande déclenche un message, un son et une notification du navigateur.
-  // Elles ne fonctionnent que tant que l'espace vendeuse est ouvert (onglet actif ou en arrière-plan récent).
+  // Alertes : notification push (même site fermé, voir sw.js et la fonction notify-order) une fois activées ;
+  // page ouverte, chaque nouvelle demande déclenche en plus un message et un son.
   if ('serviceWorker' in navigator) navigator.serviceWorker.register(ROOT + 'sw.js').catch(() => {});
   armSound();
   const al = $('#alerts');
-  if ('Notification' in window && Notification.permission === 'default') {
+  if (canPush() && Notification.permission === 'granted') subscribePush(); // abonnement renouvelé à chaque visite
+  else if (iosNeedsHomeScreen()) {
     al.hidden = false;
-    al.onclick = async () => { const r = await Notification.requestPermission(); al.hidden = true; toast(r === 'granted' ? 'Alertes activées : vous serez prévenue à chaque nouvelle commande.' : 'Alertes du navigateur refusées : les commandes s’afficheront quand même ici.', r !== 'granted'); };
+    al.onclick = () => toast('Sur iPhone : touchez Partager puis « Sur l’écran d’accueil », ouvrez Les Reines depuis l’icône et activez les alertes.');
+  } else if ('Notification' in window && Notification.permission === 'default') {
+    al.hidden = false;
+    al.onclick = async () => {
+      const r = await Notification.requestPermission(); al.hidden = true;
+      if (r !== 'granted') return toast('Alertes refusées : les commandes s’afficheront quand même ici.', 1);
+      toast(await subscribePush() ? 'Alertes activées : vous serez prévenue de chaque commande, même téléphone verrouillé.'
+        : 'Alertes activées tant que cette page est ouverte (notifications hors ligne indisponibles sur ce navigateur).');
+    };
   }
   sb.channel('commandes-' + u.id)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'seller_orders', filter: `seller_id=eq.${u.id}` }, ({ new: o }) => {
@@ -127,7 +137,32 @@ export async function seller(active, { title = '', sub = '', actions = '' } = {}
     .subscribe();
   return { u, shop };
 }
+// Notifications push : l'appareil s'abonne auprès du navigateur et l'abonnement est enregistré pour la vendeuse.
+const canPush = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+// Sur iPhone, le push n'existe que pour le site ajouté à l'écran d'accueil et ouvert depuis son icône.
+const iosNeedsHomeScreen = () => /iPhone|iPad|iPod/.test(navigator.userAgent) && !navigator.standalone && !canPush();
+const b64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0));
+async function subscribePush() {
+  if (!canPush()) return false;
+  try {
+    await navigator.serviceWorker.register(ROOT + 'sw.js');
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID_PUBLIC_KEY) });
+    const { endpoint, keys } = sub.toJSON();
+    const { error } = await sb.rpc('save_push_subscription', { p_endpoint: endpoint, p_p256dh: keys.p256dh, p_auth: keys.auth });
+    return !error;
+  } catch { return false; }
+}
+// Déconnexion : cet appareil cesse de recevoir les commandes du compte (téléphone partagé).
+async function unsubscribePush() {
+  try {
+    const reg = 'serviceWorker' in navigator && await navigator.serviceWorker.getRegistration(ROOT);
+    const sub = reg && reg.pushManager && await reg.pushManager.getSubscription();
+    if (sub) { await sb.from('push_subscriptions').delete().eq('endpoint', sub.endpoint); await sub.unsubscribe(); }
+  } catch { }
+}
 // Notification système : par le service worker (seule voie acceptée sur Android), sinon directement.
+// Même tag que la notification push de la même commande : l'une remplace l'autre, pas de doublon.
 async function notify(title, body, tag) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const opt = { body, tag, icon: ROOT + 'assets/logo.png', badge: ROOT + 'assets/logo.png' };
