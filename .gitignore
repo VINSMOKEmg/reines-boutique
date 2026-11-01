@@ -6,3 +6,5 @@ Thumbs.db
 desktop.ini
 *.log
 .env
+.mcp.json
+.claude/settings.local.json
