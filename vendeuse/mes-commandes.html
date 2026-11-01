@@ -22,6 +22,9 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(b)
 // Le statut est enregistré par ui.js ; on met à jour les compteurs des filtres.
 document.addEventListener('change',e=>{const s=e.target.closest('[data-so]');if(!s)return;const o=O.find(x=>x.id===s.dataset.so);if(o)o.status=s.value;setTimeout(draw)});
 draw();
-// Nouvelle commande reçue en direct (voir ui.js) : on recharge pour l'afficher.
-document.addEventListener('commande',()=>setTimeout(()=>location.reload(),1500));
+// Nouvelle commande reçue en direct (voir ui.js) : ajoutée en tête de liste, sans recharger la page
+// (un rechargement couperait le son des alertes suivantes).
+document.addEventListener('commande',async e=>{
+ const {data:o}=await sb.from('seller_orders').select('id,ref,total,status,created_at,order_items(name,qty,option)').eq('id',e.detail.id).single();
+ if(o&&!O.some(x=>x.id===o.id)){O.unshift(o);draw()}});
 </script></body></html>

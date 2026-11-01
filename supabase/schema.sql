@@ -145,8 +145,12 @@ begin
   base:='CMD-'||upper(substr(md5(gen_random_uuid()::text),1,6));
   insert into orders(ref,client_id) values(base,uid) returning id into oid;
   for sid in select distinct pr.seller_id from jsonb_array_elements(items) e join products pr on pr.id=(e->>'product_id')::uuid loop
-    n:=n+1; lines:='[]'::jsonb; tot:=0;
-    insert into seller_orders(order_id,seller_id,ref) values(oid,sid,base||'-'||n) returning id into soid;
+    n:=n+1; lines:='[]'::jsonb;
+    -- Total calculé avant l'insertion : l'alerte en direct de la vendeuse reçoit le bon montant.
+    select coalesce(sum(least(greatest(coalesce((e->>'qty')::int,1),1),99)*pr.price_fcfa),0) into tot
+      from jsonb_array_elements(items) e join products pr on pr.id=(e->>'product_id')::uuid where pr.seller_id=sid;
+    insert into seller_orders(order_id,seller_id,ref,total) values(oid,sid,base||'-'||n,tot) returning id into soid;
+    tot:=0;
     for it in select value from jsonb_array_elements(items) loop
       select * into p from products where id=(it->>'product_id')::uuid and seller_id=sid;
       if not found then continue; end if;
@@ -156,7 +160,6 @@ begin
       tot:=tot+q*p.price_fcfa;
       lines:=lines||jsonb_build_array(jsonb_build_object('name',p.name,'qty',q,'price',p.price_fcfa,'option',o,'option_label',p.option_label));
     end loop;
-    update seller_orders set total=tot where id=soid;
     select shop_name, whatsapp into shop from seller_profiles where id=sid;
     res:=res||jsonb_build_array(jsonb_build_object('ref',base||'-'||n,'shop_name',shop.shop_name,'whatsapp',shop.whatsapp,'total',tot,'items',lines));
   end loop;
