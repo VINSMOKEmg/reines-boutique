@@ -1,0 +1,31 @@
+# Réveil Supabase : une petite lecture par jour empêche la mise en pause du projet gratuit (après 7 jours sans activité).
+# L'adresse et la clé publique sont lues dans js/config.js : rien à configurer, rien en double.
+# Lancement manuel : GitHub > Actions > « Réveil Supabase » > Run workflow.
+name: Réveil Supabase
+
+on:
+  schedule:
+    - cron: '17 6 * * *'   # tous les jours vers 6 h 17 (heure de Dakar = UTC)
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/supabase-reveil.yml']
+
+jobs:
+  reveil:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: js/config.js
+          sparse-checkout-cone-mode: false
+      - name: Lire une catégorie
+        run: |
+          URL=$(sed -n "s/.*SUPABASE_URL *= *'\([^']*\)'.*/\1/p" js/config.js)
+          KEY=$(sed -n "s/.*SUPABASE_ANON_KEY *= *'\([^']*\)'.*/\1/p" js/config.js)
+          test -n "$URL" && test -n "$KEY" || { echo "Adresse ou clé introuvable dans js/config.js"; exit 1; }
+          CODE=$(curl -s -o /tmp/r.json -w '%{http_code}' --retry 3 --retry-delay 20 --max-time 30 \
+            "$URL/rest/v1/categories?select=id&limit=1" -H "apikey: $KEY" -H "Authorization: Bearer $KEY")
+          echo "Réponse Supabase : $CODE $(cat /tmp/r.json)"
+          test "$CODE" = 200
