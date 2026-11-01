@@ -11,6 +11,7 @@ import { sb, me } from './js/supabase.js';
 import * as cart from './js/cart.js';
 import { $, esc, money, img, firstImg, toast, PSEL, header } from './js/ui.js';
 await header();
+await cart.ready; // panier du compte récupéré (connectée)
 
 // Lignes du panier : { id, qty, opt, k (clé produit + option), p (produit lu en base) }.
 let rows = [];
