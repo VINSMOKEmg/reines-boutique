@@ -1,4 +1,4 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
+import { createClient } from './vendor/supabase.js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 // Lu avant createClient, qui efface ensuite les jetons de l'URL : arrivée par un lien reçu par e-mail
 // (« mot de passe oublié » = recovery ; confirmation d'inscription = login) ou lien expiré (error).

@@ -5,6 +5,8 @@
 <meta property="og:type" content="website"><meta property="og:site_name" content="Les Reines de l’Entrepreneuriat"><meta property="og:locale" content="fr_FR">
 <meta property="og:title" content="Catalogue — Les Reines de l’Entrepreneuriat"><meta property="og:description" content="Tous les produits des Reines : mode, bijoux, beauté, cosmétiques naturels, déco, pâtisserie, artisanat… Commandez en quelques clics, la vendeuse vous répond sur WhatsApp."><meta property="og:url" content="https://reinedelentrepreunariat.com/boutique/catalogue.html">
 <meta property="og:image" content="https://reinedelentrepreunariat.com/assets/hero.jpg"><meta property="og:image:width" content="1305"><meta property="og:image:height" content="1205"><meta name="twitter:card" content="summary_large_image"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#6a1233"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-title" content="Les Reines"><link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://wxdmdvxmxhoijfyshyyg.supabase.co" crossorigin>
+<link rel="modulepreload" href="js/vendor/supabase.js"><link rel="modulepreload" href="js/supabase.js"><link rel="modulepreload" href="js/config.js"><link rel="modulepreload" href="js/cart.js"><link rel="modulepreload" href="js/ui.js">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css"></head><body>
 <div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
@@ -17,7 +19,7 @@
 <script type="module">
 import { sb } from './js/supabase.js';
 import { $, esc, toast, card, PSEL, header, ic, favs } from './js/ui.js';
-await header();
+header(); // en parallèle du contenu de la page : rien ici ne dépend de l'en-tête
 
 import { DEMO, demoCard } from './js/demo.js';
 import { DEMO_WHEN_EMPTY as DEMO_ON } from './js/config.js';
