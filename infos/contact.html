@@ -15,7 +15,8 @@
 <div class="info-grid">
  <article class="icard"><span class="ibox"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg></span>
   <h2>Nous écrire</h2><p>Pour toute question sur le site ou pour joindre l’administration.</p><p class="big-num" id="num"></p>
-  <a class="btn wapp" id="wa" target="_blank" rel="noopener">Écrire sur WhatsApp</a></article>
+  <a class="btn wapp" id="wa" target="_blank" rel="noopener">Écrire sur WhatsApp</a>
+  <p class="mut" style="margin:12px 0 0;font-size:13px">Ou par e-mail : <a class="lnk" id="mail"></a></p></article>
  <article class="icard"><span class="ibox"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9l1-5h14l1 5"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9"/><path d="M5 12v8h14v-8"/><path d="M10 20v-5h4v5"/></svg></span>
   <h2>Devenir vendeuse</h2><p>La boutique est réservée aux membres du groupe. Pour ouvrir la vôtre :</p>
   <ol class="nsteps"><li>Envoyez votre numéro WhatsApp à l’administration.</li><li>Créez votre compte sur le site avec ce même numéro.</li><li>L’administration valide : votre boutique s’ouvre.</li></ol>
@@ -29,12 +30,13 @@
 import { $, header } from './js/ui.js';
 header(); // en parallèle du contenu de la page : rien ici ne dépend de l'en-tête
 
-import { CONTACT_WHATSAPP } from './js/config.js';
+import { CONTACT_WHATSAPP, CONTACT_EMAIL } from './js/config.js';
 const num = String(CONTACT_WHATSAPP).replace(/\D/g, '');
 const wa = text => 'https://wa.me/' + num + '?text=' + encodeURIComponent(text);
 // Numéro lisible : +221 77 592 10 70 (format sénégalais), sinon +indicatif tel quel.
 $('#num').textContent = /^221\d{9}$/.test(num) ? `+221 ${num.slice(3, 5)} ${num.slice(5, 8)} ${num.slice(8, 10)} ${num.slice(10)}` : '+' + num;
 // Messages de départ préremplis, pour que la conversation ne s'ouvre pas vide.
+$('#mail').textContent = CONTACT_EMAIL; $('#mail').href = 'mailto:' + CONTACT_EMAIL;
 $('#wa').href = wa('Bonjour, je vous écris depuis le site Les Reines de l’Entrepreneuriat. ');
 $('#wa2').href = wa('Bonjour, je suis membre du groupe et je souhaite ouvrir ma boutique sur Les Reines de l’Entrepreneuriat. Mon nom : ');
 </script></body></html>
