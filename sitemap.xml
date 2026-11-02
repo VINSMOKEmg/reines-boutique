@@ -5,4 +5,6 @@
   <url><loc>https://www.lesreinesboutique.com/boutique/vendeuses.html</loc><priority>0.8</priority></url>
   <url><loc>https://www.lesreinesboutique.com/infos/apropos.html</loc><priority>0.5</priority></url>
   <url><loc>https://www.lesreinesboutique.com/infos/contact.html</loc><priority>0.5</priority></url>
+  <url><loc>https://www.lesreinesboutique.com/infos/conditions.html</loc><priority>0.4</priority></url>
+  <url><loc>https://www.lesreinesboutique.com/infos/livraison.html</loc><priority>0.4</priority></url>
 </urlset>

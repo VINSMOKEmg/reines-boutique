@@ -1,0 +1,58 @@
+# Sauvegarde hebdomadaire de Supabase : structure, données (comptes, profils, boutiques, produits, commandes…) et photos.
+# Le dépôt est public : l'archive est CHIFFRÉE (AES-256) avec la phrase secrète BACKUP_PASSPHRASE avant d'être gardée
+# 90 jours dans les « artifacts » de chaque exécution (onglet Actions). Mode d'emploi et restauration : SAUVEGARDE.md.
+# Secrets à créer (Settings > Secrets and variables > Actions) : SUPABASE_DB_URL et BACKUP_PASSPHRASE.
+name: Sauvegarde Supabase
+
+on:
+  schedule:
+    - cron: '30 2 * * 0'   # chaque dimanche vers 2 h 30 (heure de Dakar = UTC)
+  workflow_dispatch:
+
+jobs:
+  sauvegarde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            js/config.js
+            .github/sauvegarde-photos.mjs
+          sparse-checkout-cone-mode: false
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Vérifier les secrets
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          test -n "$DB" || { echo "::error::Secret SUPABASE_DB_URL manquant (voir SAUVEGARDE.md)"; exit 1; }
+          test ${#PASS} -ge 12 || { echo "::error::Secret BACKUP_PASSPHRASE manquant ou trop court (12 caractères minimum)"; exit 1; }
+      - name: Exporter la base
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir -p sauvegarde/base sauvegarde/photos
+          supabase db dump --db-url "$DB" -f sauvegarde/base/1-roles.sql --role-only
+          supabase db dump --db-url "$DB" -f sauvegarde/base/2-structure.sql
+          supabase db dump --db-url "$DB" -f sauvegarde/base/3-donnees.sql --use-copy --data-only
+          wc -c sauvegarde/base/*.sql
+      - name: Copier les photos
+        run: node .github/sauvegarde-photos.mjs sauvegarde/photos
+      - name: Chiffrer
+        env:
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          F="reines-sauvegarde-$(date -u +%Y-%m-%d).tar.gz.gpg"
+          tar czf - sauvegarde | gpg --batch --yes --symmetric --cipher-algo AES256 --pinentry-mode loopback --passphrase "$PASS" -o "$F"
+          rm -rf sauvegarde
+          echo "FICHIER=$F" >> "$GITHUB_ENV"
+          ls -la "$F"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.FICHIER }}
+          path: ${{ env.FICHIER }}
+          retention-days: 90
+          compression-level: 0

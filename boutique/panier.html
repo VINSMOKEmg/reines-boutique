@@ -71,7 +71,8 @@ function draw() {
       <p class="mut" style="margin:0 0 4px;font-size:13px">Ces précisions sont ajoutées à votre message WhatsApp : la vendeuse pourra vous répondre plus vite.</p>
       <div class="two"><label>Lieu de livraison<input id="lieu" maxlength="120" placeholder="Ex. Mermoz, Dakar" value="${esc(cart.lieu.get())}"></label>
       <label>Précision<input id="note" maxlength="200" placeholder="Créneau, détail…"></label></div></div>
-    <button class="btn pk" id="ok" style="width:100%;padding:14px">Valider ma commande</button>`;
+    <button class="btn pk" id="ok" style="width:100%;padding:14px">Valider ma commande</button>
+    <p class="mut" style="font-size:12px;text-align:center;margin:10px 0 0">En validant, vous acceptez les <a class="lnk" href="infos/conditions.html">conditions de vente</a>. Livraison et retours : <a class="lnk" href="infos/livraison.html">voir les règles</a>.</p>`;
   $('#t').textContent = `Mon panier (${nb()})`;
   $('#vd').onclick = () => {
     cart.clear();

@@ -26,7 +26,7 @@
 <dialog id="dl"><form class="f" id="df"></form></dialog>
 <script type="module">
 import {sb,requireRole} from './js/supabase.js';
-import {$,esc,money,img,toast,logout,ic,ICONS,normPhone,PHONE_ERR,statusSelect,itemTxt,stockTxt,setupAlerts} from './js/ui.js';
+import {$,esc,money,img,toast,logout,ic,ICONS,normPhone,PHONE_ERR,statusSelect,itemTxt,stockTxt,setupAlerts,shrinkImage} from './js/ui.js';
 const a=await requireRole(['admin']);if(!a)throw 0;
 
 const CAT_ICONS=Object.keys(ICONS).slice(0,16);  // les 16 premières icônes sont celles des niches
@@ -218,7 +218,7 @@ const ACTS={
   edit('Modifier la boutique',[{k:'shop_name',l:'Nom de la boutique',v:x.shop_name},{k:'whatsapp',l:'WhatsApp (ex. 77 123 45 67)',t:'tel',v:x.whatsapp},{k:'location',l:'Localisation',v:x.location},{k:'description',l:'Description',t:'area',v:x.description},{k:'logo',l:'Nouveau logo (facultatif)',t:'file'}],async(v,f)=>{
    const w=v.whatsapp.trim()?normPhone(v.whatsapp):null;if(v.whatsapp.trim()&&!w)throw new Error(PHONE_ERR);
    if(v.shop_name.trim().length<2)throw new Error('Nom de boutique trop court.');
-   const o={shop_name:v.shop_name.trim(),whatsapp:w,location:v.location.trim(),description:v.description.trim()},fl=f.logo.files[0];
+   const o={shop_name:v.shop_name.trim(),whatsapp:w,location:v.location.trim(),description:v.description.trim()},fl=await shrinkImage(f.logo.files[0],600);
    if(fl){if(!IMG_OK(fl))throw new Error('Image invalide : JPG, PNG ou WebP, 3 Mo maximum.');
     const path=`${x.id}/logo-${Date.now()}.${fl.type.split('/')[1]}`,u=await sb.storage.from('shop-media').upload(path,fl,{contentType:fl.type});if(u.error)throw u.error;o.logo_path=path}
    const {error}=await sb.from('seller_profiles').update(o).eq('id',x.id);if(error)throw error})},

@@ -58,7 +58,7 @@ function footer(u, home) {
    <p class="ft-tag">Ensemble plus fortes pour réussir.</p></div>
   ${col('Boutique', [['boutique/catalogue.html', 'Tous les produits'], ['boutique/catalogue.html#niches', 'Catégories'], ['boutique/vendeuses.html', 'Nos vendeuses'], ['boutique/catalogue.html?fav=1', 'Mes favoris']])}
   ${col('Mon compte', acc)}
-  <nav class="ft-col" aria-label="Informations"><h4>Informations</h4><a href="infos/apropos.html">À propos</a><a href="infos/contact.html">Contact</a><a href="infos/contact.html">Devenir vendeuse</a><a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a><a class="ft-wa" href="infos/contact.html">${ic('chat')}Nous écrire sur WhatsApp</a></nav></div>
+  <nav class="ft-col" aria-label="Informations"><h4>Informations</h4><a href="infos/apropos.html">À propos</a><a href="infos/contact.html">Contact</a><a href="infos/contact.html">Devenir vendeuse</a><a href="infos/conditions.html">Conditions de vente</a><a href="infos/livraison.html">Livraison et retours</a><a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a><a class="ft-wa" href="infos/contact.html">${ic('chat')}Nous écrire sur WhatsApp</a></nav></div>
   <div class="ft-trust">${[['truck', 'Livraison', 'Organisée par chaque vendeuse'], ['wallet', 'Paiement', 'Directement à la vendeuse'], ['chat', 'Commande et suivi', 'Sur WhatsApp, avec votre référence']]
     .map(([i, t, s]) => `<div><b>${ic(i)}</b><span>${t}<small>${s}</small></span></div>`).join('')}</div>
   <div class="ft-bottom"><span>© ${new Date().getFullYear()} Les Reines de l’Entrepreneuriat. Tous droits réservés.</span><span>Boutique collective de femmes entrepreneures</span></div>`;
@@ -80,7 +80,7 @@ export const card = p => `<div class="p"><a href="boutique/produit.html?id=${p.i
 <div class="pb"><b>${esc(p.name)}</b><div class="pr">${money(p.price_fcfa)}</div><div class="sl">${mini(p.seller_profiles)}${esc(p.seller_profiles?.shop_name)}</div>
 ${!p.is_available || p.stock === 0 ? `<p class="mut" style="margin:0">${p.stock === 0 ? 'Épuisé' : 'Indisponible'}</p>`
   : p.options?.length ? `<div class="acts"><a class="btn" href="boutique/produit.html?id=${p.id}">Choisir ${esc((p.option_label || 'une option').toLowerCase())}</a></div>`
-  : `<div class="acts"><button class="btn" data-go="${p.id}">Commander</button><button class="btn wa" data-add="${p.id}">Ajouter au panier</button></div>`}${p.stock > 0 && p.stock <= 5 ? `<small class="low">Plus que ${p.stock} en stock</small>` : ''}</div></div>`;
+  : `<div class="acts"><button class="btn" data-add="${p.id}">Ajouter au panier</button></div>`}${p.stock > 0 && p.stock <= 5 ? `<small class="low">Plus que ${p.stock} en stock</small>` : ''}</div></div>`;
 // Stock lisible (vide = illimité) et option choisie, pour les fiches et les tableaux de commandes.
 export const stockTxt = p => p.stock == null ? '' : p.stock === 0 ? 'Épuisé' : p.stock <= 5 ? `Plus que ${p.stock} en stock` : `${p.stock} en stock`;
 export const itemTxt = i => `${esc(i.name)}${i.option ? ` <small class="mut">(${esc(i.option)})</small>` : ''} × ${i.qty}`;
@@ -143,6 +143,23 @@ export function setupAlerts(al) {
     al.hidden = false;
     al.onclick = () => toast('Les notifications sont bloquées pour ce site : autorisez-les dans les réglages du navigateur (icône à gauche de l’adresse), puis rechargez la page.', 1);
   }
+}
+// Photo réduite dans le navigateur avant l'envoi (côté le plus long : `max` px) : une photo de téléphone de 3 à 8 Mo
+// devient quelques centaines de Ko. Pages plus rapides, aperçus WhatsApp affichables (≈ 300 Ko au plus).
+// JPEG pour les photos ; WebP pour les PNG (garde la transparence des logos). En cas de souci, le fichier d'origine est gardé.
+export async function shrinkImage(f, max = 1280) {
+  if (!f || !/^image\/(jpeg|png|webp)$/.test(f.type) || f.size <= 300 * 1024) return f;
+  try {
+    const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
+    const k = Math.min(1, max / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = t => new Promise(r => c.toBlob(r, t, .82)), alpha = f.type !== 'image/jpeg';
+    let b = await blob(alpha ? 'image/webp' : 'image/jpeg');
+    if (!b || !/^image\/(jpeg|webp)$/.test(b.type)) { if (alpha) return f; b = await blob('image/jpeg'); } // navigateur sans encodeur WebP
+    if (!b || b.size >= f.size) return f;
+    return new File([b], f.name.replace(/\.\w+$/, '') + (b.type === 'image/webp' ? '.webp' : '.jpg'), { type: b.type });
+  } catch { return f; }
 }
 // Notifications push : l'appareil s'abonne auprès du navigateur et l'abonnement est enregistré pour son compte.
 const canPush = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
