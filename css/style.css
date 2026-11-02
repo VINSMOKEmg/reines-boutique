@@ -3,7 +3,7 @@
 body{margin:0;background:#f3e9dd;color:var(--ink);font:14px/1.55 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 h1,h2,h3,h4,.serif{font-family:'Playfair Display',Georgia,serif;color:var(--bd);margin:0 0 .5em;line-height:1.2;font-weight:600}
 h1{font-size:30px}h2{font-size:26px}h3{font-size:18px}a{color:inherit;text-decoration:none}img{max-width:100%}button{font:inherit}
-.wrap{max-width:1240px;margin:0 auto;padding:18px}.card{background:var(--cream);border-radius:20px;box-shadow:0 10px 40px rgba(106,18,51,.08);overflow:hidden;display:flex;flex-direction:column;min-height:calc(100vh - 36px)}.shell{flex:1}
+.wrap{max-width:1240px;margin:0 auto;padding:18px}.card{background:var(--cream);border-radius:20px;box-shadow:0 10px 40px rgba(106,18,51,.08);overflow:hidden;overflow:clip;display:flex;flex-direction:column;min-height:calc(100vh - 36px)}.shell{flex:1}
 .w{padding:26px 30px}.mut{color:var(--mut)}.lnk{color:var(--bd);font-weight:600;font-size:13px}.ok{color:var(--wa);font-weight:600}
 .ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}svg{max-width:100%}
 /* en-tête */
@@ -78,7 +78,7 @@ body.menu-open{overflow:hidden}body.menu-open .ov{opacity:1;pointer-events:auto}
 .tabs{display:none}
 @media(max-width:1000px){.strip{grid-template-columns:repeat(2,1fr);gap:16px 0}.strip div:nth-child(3){border-left:0;padding-left:0}.vband{grid-template-columns:1fr}.pdw{grid-template-columns:1fr}}
 @media(max-width:900px){.burger{display:grid}.mnav{display:none}.top{gap:10px;padding:12px 16px;flex-wrap:wrap}.brand{flex:1}.top .search{order:5;flex-basis:100%;max-width:none;margin:0}.ico{gap:14px}.ico a{font-size:0}.ico a:first-child{display:none}.ico a .ic{width:24px;height:24px}}
-@media(max-width:700px){html,body{overflow-x:hidden}body{background:var(--cream);padding-bottom:calc(74px + env(safe-area-inset-bottom))}.wrap{padding:0}.card{border-radius:0;box-shadow:none;min-height:100vh}
+@media(max-width:700px){html,body{overflow-x:hidden;overflow-x:clip}body{background:var(--cream);padding-bottom:calc(74px + env(safe-area-inset-bottom))}.wrap{padding:0}.card{border-radius:0;box-shadow:none;min-height:100vh}
 .hero{min-height:300px;background-size:cover;background-position:72% 25%}.hero:before{background:linear-gradient(90deg,rgba(251,245,237,.94) 0,rgba(251,245,237,.74) 55%,rgba(251,245,237,.1) 100%)}.hc{padding:30px 20px}.hc h1{font-size:28px}.hc p{font-size:13.5px}
 .strip{margin:0 14px}.strip div{padding:0 8px}.strip b{width:42px;height:42px}.blk{padding:20px 14px 4px}.cats{overflow:auto;justify-content:flex-start;gap:6px}.cat{flex:none;min-width:84px}.cat b{width:68px;height:68px}.cat b .ic{width:28px;height:28px}
 .prods{grid-template-columns:repeat(2,1fr);gap:10px}.ph{height:118px}.pb{padding:9px}.pb b{font-size:12.5px}.pb .btn{padding:9px 6px;font-size:12px}.vband{margin:10px 14px 20px;padding:20px 16px}.vs{justify-content:center;gap:12px}.v{width:88px}.v .av{width:68px;height:68px}
@@ -272,3 +272,15 @@ body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-ri
 .legal ol{margin:0 0 12px;padding-left:22px}.legal li{margin-bottom:4px}
 .legal-maj{color:var(--mut)!important;font-size:13px!important;margin-top:22px!important}
 @media(max-width:700px){.legal section{padding:18px 16px}.legal h2{font-size:20px}}
+/* Téléphones et tablettes : champs à 16 px minimum, sinon l'iPhone zoome toute la page dès qu'on touche un champ
+   (connexion, recherche…) et elle reste agrandie. Pas de zoom par double toucher ; le zoom à deux doigts reste possible. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
+@media (max-width:900px),(pointer:coarse){:is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea){font-size:16px}}
+
+/* En-tête fixé en haut. Sur téléphone, il est collé à une hauteur négative (variable --hdr-shift, mesurée par js/ui.js) :
+   la ligne du logo défile et sort de l'écran, la barre de recherche s'arrête en haut et y reste. Pas de transform :
+   la barre du bas et le menu, placés dans l'en-tête en position fixed, doivent rester rattachés à l'écran. */
+#hdr{position:sticky;top:calc(-1 * var(--hdr-shift,0px));z-index:40;background:var(--cream);transition:box-shadow .25s ease}
+#hdr.hdr-scrolled{box-shadow:0 6px 18px rgba(106,18,51,.08)}
+html{scroll-padding-top:170px}
+@media(max-width:900px){html{scroll-padding-top:80px}}

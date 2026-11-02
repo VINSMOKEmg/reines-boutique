@@ -40,6 +40,16 @@ export async function header() {
   bg.onclick = () => tog(!document.body.classList.contains('menu-open')); $('#ov').onclick = () => tog(false);
   $('#drawer').addEventListener('click', e => { if (e.target.closest('a,[data-close]')) tog(false); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') tog(false); });
+  // En-tête fixé en haut (css : #hdr). Quand la recherche est sur sa propre ligne (téléphone), --hdr-shift = hauteur
+  // au-dessus d'elle : cette partie défile, la recherche reste ; menu, panier et compte sont dans la barre du bas.
+  const H = $('#hdr'), S = H.querySelector('.search');
+  let shift = 0;
+  const measure = () => { shift = S.getBoundingClientRect().top - H.getBoundingClientRect().top - 8; if (shift < 30) shift = 0; H.style.setProperty('--hdr-shift', shift + 'px'); };
+  const shade = () => H.classList.toggle('hdr-scrolled', scrollY > shift + 4); // ombre une fois l'en-tête collé
+  measure(); shade();
+  addEventListener('scroll', shade, { passive: true });
+  addEventListener('resize', () => { measure(); shade(); });
+  addEventListener('load', () => { measure(); shade(); }); // les polices peuvent changer la hauteur du logo
   if ($('#dlo')) $('#dlo').onclick = ev => { ev.preventDefault(); logout(); };
   const upd = () => { const n = cart.count(), el = $('#cc'); el.textContent = n || ''; el.hidden = !n; }; upd(); document.addEventListener('cart', upd);
   footer(u, home);
