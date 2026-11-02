@@ -50,7 +50,7 @@ jobs:
           rm -rf sauvegarde
           echo "FICHIER=$F" >> "$GITHUB_ENV"
           ls -la "$F"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.FICHIER }}
           path: ${{ env.FICHIER }}
