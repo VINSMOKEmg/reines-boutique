@@ -6,6 +6,9 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 export const CONTACT_EMAIL = 'contact@lesreinesboutique.com';
 // Numéro WhatsApp affiché sur la page Contact (format international sans +).
 export const CONTACT_WHATSAPP = '221775921070';
+// Clé publique (« site key ») du captcha Cloudflare Turnstile. Vide = pas de captcha. La clé secrète va dans Supabase.
+// Ne pas activer « Captcha protection » dans Supabase tant que cette clé n’est pas en ligne.
+export const TURNSTILE_SITE_KEY = '';
 // true : affiche des exemples (comme l'aperçu) tant qu'il n'y a aucun produit ni boutique. Mettre false pour les masquer.
 export const DEMO_WHEN_EMPTY = false;
 // Clé publique des notifications push (VAPID). La clé privée correspondante est le secret VAPID_PRIVATE_KEY de la fonction notify-order.

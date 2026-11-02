@@ -9,11 +9,14 @@
 <div class="wrap"><div class="card"><div id="hdr"></div><div id="bn"></div>
 
 <main class="w"><div class="auth f"><h1 style="font-size:36px">Créer un compte</h1><form id="f"><label>Nom complet<input name="n" required maxlength="80" autocomplete="name"></label><label>E-mail<input type="email" name="e" required autocomplete="username email" autocapitalize="off" spellcheck="false"></label><label>Numéro WhatsApp<input type="tel" name="t" required autocomplete="tel" inputmode="tel" placeholder="77 123 45 67"></label><p class="mut" style="font-size:12px;margin:4px 0 0">Vendeuses : ce numéro devient celui de votre boutique, sur lequel les clientes vous écrivent. Hors Sénégal, ajoutez l’indicatif (ex. +33…).</p><label>Mot de passe (8 caractères minimum)<input type="password" name="p" required minlength="8" autocomplete="new-password"></label>
+<div id="cap"></div>
 <p><button class="btn" style="width:100%">Créer mon compte</button></p></form><p class="mut" style="font-size:12.5px">Vendeuse membre du groupe ? Créez votre compte avec <b>le numéro WhatsApp enregistré par l’administration</b>. Après validation de votre boutique par l’administration, vous pourrez vous connecter avec ce numéro.</p><p class="mut">Déjà inscrite ? <a class="lnk" href="compte/connexion.html">Se connecter</a></p></div></main>
 <footer class="foot" id="ftr"></footer></div></div>
 <script type="module">
 import { sb, me, ROOT, safeNext } from './js/supabase.js';
 import { $, toast, header, seller, normPhone, PHONE_ERR } from './js/ui.js';
+import { mountCaptcha, captchaToken, captchaError } from './js/captcha.js';
+mountCaptcha(document.getElementById('cap'));
 header(); // en parallèle du contenu de la page : rien ici ne dépend de l'en-tête
 
 $('#f').onsubmit = async e => {
@@ -31,10 +34,10 @@ $('#f').onsubmit = async e => {
   const { data, error } = await sb.auth.signUp({
     email: f.e.value.trim(),
     password: f.p.value,
-    options: { data: { full_name: f.n.value.trim(), phone }, emailRedirectTo: new URL('compte/connexion.html', ROOT).href }
+    options: { data: { full_name: f.n.value.trim(), phone }, emailRedirectTo: new URL('compte/connexion.html', ROOT).href, captchaToken: await captchaToken() }
   });
   if (error) {
-    toast(error.message, 1);
+    toast(captchaError(error) || error.message, 1);
     b.disabled = false;
     return;
   }
