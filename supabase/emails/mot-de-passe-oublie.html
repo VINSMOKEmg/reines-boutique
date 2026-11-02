@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nouveau mot de passe</title></head>
+<body style="margin:0;padding:0;background:#f3e9dd;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3e9dd;"><tr><td align="center" style="padding:28px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fffaf4;border-radius:16px;overflow:hidden;">
+<tr><td align="center" style="background:#6a1233;padding:26px 20px 20px;">
+<img src="https://www.lesreinesboutique.com/assets/logo.png" width="84" height="84" alt="Les Reines de l’Entrepreneuriat" style="display:block;border:0;">
+<div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;color:#ffffff;margin-top:10px;">Les Reines</div>
+<div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#e8c27a;">de l’Entrepreneuriat</div>
+</td></tr>
+<tr><td style="padding:30px 32px 6px;font-family:Arial,Helvetica,sans-serif;color:#2a1a1f;font-size:15px;line-height:1.6;">
+<h1 style="font-family:Georgia,'Times New Roman',serif;color:#6a1233;font-size:24px;line-height:1.25;margin:0 0 14px;font-weight:normal;">Choisissez un nouveau mot de passe</h1>
+<p style="margin:0 0 10px;">Vous avez demandé à changer le mot de passe de votre compte <b>{{ .Email }}</b>.</p><p style="margin:0;">Cliquez sur le bouton ci-dessous pour en choisir un nouveau. Ce lien n’est valable que peu de temps et une seule fois.</p>
+</td></tr>
+<tr><td align="center" style="padding:14px 32px 26px;">
+<a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#6a1233;color:#ffffff;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:15px;padding:14px 30px;border-radius:10px;">Choisir un nouveau mot de passe</a>
+</td></tr>
+<tr><td style="padding:0 32px 28px;font-family:Arial,Helvetica,sans-serif;color:#7d6c6a;font-size:12.5px;line-height:1.6;">
+Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>
+<a href="{{ .ConfirmationURL }}" style="color:#6a1233;word-break:break-all;">{{ .ConfirmationURL }}</a><br><br>
+Ce n’est pas vous ? Ignorez cet e-mail : votre mot de passe actuel reste valable et personne ne peut le changer sans ce lien.
+</td></tr>
+<tr><td align="center" style="background:#f9e4dc;padding:16px 20px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#7d6c6a;">
+Les Reines de l’Entrepreneuriat · <a href="https://www.lesreinesboutique.com" style="color:#6a1233;">lesreinesboutique.com</a><br>
+<span style="font-family:Georgia,'Times New Roman',serif;font-style:italic;color:#6a1233;">Ensemble plus fortes pour réussir.</span>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>
