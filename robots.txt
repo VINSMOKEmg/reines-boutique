@@ -4,4 +4,4 @@ Disallow: /vendeuse/
 Disallow: /compte/
 Disallow: /boutique/panier.html
 
-Sitemap: https://lesreinesboutique.com/sitemap.xml
+Sitemap: https://www.lesreinesboutique.com/sitemap.xml
