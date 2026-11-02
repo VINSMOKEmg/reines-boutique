@@ -55,6 +55,15 @@ $('#nav').innerHTML=Object.entries(TABS).map(([k,[l,i]])=>`<a href="#${k}" data-
 $('#me').innerHTML=`<span class="av">${esc((a.full_name||a.email||'A')[0].toUpperCase())}</span><span><b>${esc(a.full_name||'Administratrice')}</b><small>${esc(a.email||'')}</small></span>`;
 $('#lo').onclick=logout;
 setupAlerts($('#alerts')); // notification push à chaque commande, toutes boutiques confondues
+// Boutique personnelle de l'administratrice : lien vers son espace vendeuse, ou bouton pour l'ouvrir (admin_open_shop).
+const {data:myShop}=await sb.from('seller_profiles').select('id').eq('id',a.id).maybeSingle();
+document.querySelector('.app-side-foot a[href="compte/client.html"]').insertAdjacentHTML('beforebegin',myShop
+ ?`<a href="vendeuse/dashboard.html" title="Mon espace vendeuse">${ic('store')}<span class="lbl">Mon espace vendeuse</span></a>`
+ :`<button type="button" id="openshop" title="Ouvrir ma boutique">${ic('store')}<span class="lbl">Ouvrir ma boutique</span></button>`);
+if(!myShop)$('#openshop').onclick=async()=>{
+ if(!confirm('Ouvrir votre propre boutique ?\nVous la gérerez depuis « Mon espace vendeuse », comme les autres vendeuses, sans quitter votre compte admin.'))return;
+ const {error}=await sb.rpc('admin_open_shop');if(error)return toast(error.message,1);
+ location.href='vendeuse/profil-boutique.html'};
 
 $('#app').innerHTML=`
 <section data-tab="accueil"><div class="kpis" id="kp"></div><div id="start"></div>
@@ -161,7 +170,7 @@ function ordersView(){const {O}=D,F=[['all','Toutes'],['nouvelle','Nouvelles'],[
 
 // ---------- Vendeuses ----------
 function shopsView(){const {S,P,O,PR}=D;
- $('#sl').innerHTML=S.length?'<div class="cards">'+S.map(x=>{const owner=PR.find(y=>y.id===x.id),member=!owner||isMember(owner),
+ $('#sl').innerHTML=S.length?'<div class="cards">'+S.map(x=>{const owner=PR.find(y=>y.id===x.id),member=!owner||owner.role==='admin'||isMember(owner), // l'administratrice n'est pas dans la liste des membres
   np=P.filter(y=>y.seller_id===x.id),no=O.filter(y=>y.seller_id===x.id).length,on=x.status==='active';
   return `<article class="shop-card"><div class="sc-top">${logo(x)}<div><b>${esc(x.shop_name)}</b><small>${esc(x.location||'Localisation non renseignée')}</small></div><span class="badge ${on?'ok':'no'}">${on?'Active':'Suspendue'}</span></div>
   <dl><div><dt>WhatsApp</dt><dd>${x.whatsapp?wa(x.whatsapp):'<span class="warn">manquant</span>'}</dd></div><div><dt>Produits</dt><dd>${np.filter(y=>y.is_approved).length} / ${np.length}</dd></div><div><dt>Commandes</dt><dd>${no}</dd></div></dl>

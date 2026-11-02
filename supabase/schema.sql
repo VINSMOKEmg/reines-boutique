@@ -361,3 +361,16 @@ end $$;
 revoke execute on function private.notify_new_order() from public, anon, authenticated;
 drop trigger if exists t_notify_new_order on public.seller_orders;
 create trigger t_notify_new_order after insert on public.seller_orders for each row execute function private.notify_new_order();
+
+-- BOUTIQUE DE L’ADMINISTRATRICE (identique à migrations/010_boutique_admin.sql).
+create or replace function public.admin_open_shop() returns void
+language plpgsql security definer set search_path = public, private as $$
+begin
+  if not is_admin() then raise exception 'Réservé à l''administrateur'; end if;
+  -- Boutique active d'emblée, avec le numéro du profil comme WhatsApp ; rien ne change si elle existe déjà.
+  insert into seller_profiles(id, shop_name, full_name, whatsapp, status)
+    select p.id, 'Ma boutique', p.full_name, p.phone, 'active' from profiles p where p.id = auth.uid()
+  on conflict (id) do nothing;
+end $$;
+revoke execute on function public.admin_open_shop() from public, anon;
+grant execute on function public.admin_open_shop() to authenticated;

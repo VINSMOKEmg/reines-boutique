@@ -98,12 +98,14 @@ export const itemTxt = i => `${esc(i.name)}${i.option ? ` <small class="mut">(${
 // Coque de l'espace vendeuse (même interface que l'admin) : vérifie le rôle, remplit la barre latérale (#sidebar)
 // et l'en-tête de page (#top). `sub` et `actions` peuvent être des fonctions (u, shop) => html.
 export async function seller(active, { title = '', sub = '', actions = '' } = {}) {
-  const u = await requireRole(['seller']); if (!u) return null;
-  const { data: shop } = await sb.from('seller_profiles').select('*').eq('id', u.id).single();
+  // Une administratrice qui a ouvert sa boutique (bouton de l'administration) a aussi accès à cet espace.
+  const u = await requireRole(['seller', 'admin']); if (!u) return null;
+  const { data: shop } = await sb.from('seller_profiles').select('*').eq('id', u.id).maybeSingle();
+  if (!shop && u.role === 'admin') { location.replace('admin/index.html'); return null; }
   const L = [['vendeuse/dashboard.html', 'Tableau de bord', 'home'], ['vendeuse/mes-commandes.html', 'Commandes', 'cart'], ['vendeuse/mes-produits.html', 'Mes produits', 'box'], ['vendeuse/ajouter-produit.html', 'Ajouter un produit', 'plus'], ['vendeuse/profil-boutique.html', 'Ma boutique', 'store']];
   $('#sidebar').innerHTML = `<a class="app-brand" href="vendeuse/dashboard.html"><img src="assets/logo.png" alt=""><span><b>Les Reines</b><small>Espace vendeuse</small></span></a>
   <nav id="nav" aria-label="Espace vendeuse">${L.map(([h, l, i]) => `<a href="${h}"${h === active ? ' class="on"' : ''}>${ic(i)}<span>${l}</span>${h === 'vendeuse/mes-commandes.html' ? '<i class="nb" id="nb-cmd" hidden></i>' : ''}</a>`).join('')}</nav>
-  <div class="app-side-foot"><a href="boutique/vendeuse.html?id=${u.id}" target="_blank" title="Voir ma boutique">${ic('ext')}<span class="lbl">Voir ma boutique</span></a>
+  <div class="app-side-foot">${u.role === 'admin' ? `<a href="admin/index.html" title="Administration">${ic('shield')}<span class="lbl">Administration</span></a>` : ''}<a href="boutique/vendeuse.html?id=${u.id}" target="_blank" title="Voir ma boutique">${ic('ext')}<span class="lbl">Voir ma boutique</span></a>
   <a href="compte/client.html" title="Mes achats">${ic('bag')}<span class="lbl">Mes achats</span></a>
   <button type="button" id="alerts" title="Alertes de commande" hidden>${ic('chat')}<span class="lbl">Activer les alertes</span></button>
   <div class="app-user">${shop?.logo_path ? `<img class="av" src="${img(shop.logo_path)}" alt="">` : `<span class="av">${esc((shop?.shop_name || '?')[0])}</span>`}<span><b>${esc(shop?.shop_name || 'Ma boutique')}</b><small>${esc(u.full_name || u.email || '')}</small></span></div>

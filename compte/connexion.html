@@ -50,7 +50,8 @@ async function go() {
     role = u?.role || 'client',
     page = (nx || '').split('?')[0];
   if (role === 'client' && cm === 'pending' && !okNx) return (location.href = 'compte/client.html?attente=1');
-  location.href = okNx && (!ONLY[page] || ONLY[page] === role) ? nx : HOME[role];
+  // Une administratrice peut aussi ouvrir les pages vendeuse (sa propre boutique).
+  location.href = okNx && (!ONLY[page] || ONLY[page] === role || (role === 'admin' && ONLY[page] === 'seller')) ? nx : HOME[role];
 }
 // Identifiant saisi -> e-mail du compte. Un numéro n'est accepté que pour une vendeuse validée.
 async function emailOf(id) {
