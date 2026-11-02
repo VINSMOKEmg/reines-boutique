@@ -1,0 +1,10 @@
+{
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "reines-boutique.vercel.app" }],
+      "destination": "https://www.lesreinesboutique.com/$1",
+      "permanent": true
+    }
+  ]
+}
