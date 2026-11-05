@@ -18,6 +18,11 @@ await cart.ready; // panier du compte récupéré (connectée)
 
 // Lignes du panier : { id, qty, opt, k (clé produit + option), p (produit lu en base) }.
 let rows = [];
+// Prénom proposé : celui de la dernière commande sur ce téléphone, sinon celui du compte connecté.
+const NOM = 'reines_nom';
+let moi = null;
+me().then(u => { moi = u; const el = $('#nom'); if (el && !el.value && u?.full_name) el.value = u.full_name; });
+const nomParDefaut = () => { try { return localStorage.getItem(NOM) || moi?.full_name || ''; } catch { return moi?.full_name || ''; } };
 const maxOf = p => (p.stock == null ? 99 : Math.min(99, p.stock)); // stock vide = illimité
 const qtyOf = id => rows.filter(r => r.id === id).reduce((a, r) => a + r.qty, 0); // quantité totale d'un produit
 const total = () => rows.reduce((a, r) => a + r.qty * unitPrice(r.p), 0);
@@ -68,7 +73,8 @@ function draw() {
     `<div class="cart-total" style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 14px"><button class="btn ghost sm" id="vd">Vider le panier</button>
       <div style="font-size:16px">Total (${nb()} articles) <b style="font:700 24px 'Playfair Display',serif;margin-left:10px">${money(total())}</b></div></div>
     <div class="box f cmd-info"><h3>Pour la vendeuse <small class="mut">(facultatif)</small></h3>
-      <p class="mut" style="margin:0 0 4px;font-size:13px">Ces précisions sont ajoutées à votre message WhatsApp : la vendeuse pourra vous répondre plus vite.</p>
+      <p class="mut" style="margin:0 0 4px;font-size:13px">Pas besoin de compte. Ces précisions sont ajoutées à votre message WhatsApp : la vendeuse pourra vous répondre plus vite.</p>
+      <label>Votre prénom<input id="nom" maxlength="80" autocomplete="given-name" placeholder="Ex. Awa" value="${esc(nomParDefaut())}"></label>
       <div class="two"><label>Lieu de livraison<input id="lieu" maxlength="120" placeholder="Ex. Mermoz, Dakar" value="${esc(cart.lieu.get())}"></label>
       <label>Précision<input id="note" maxlength="200" placeholder="Créneau, détail…"></label></div></div>
     <button class="btn pk" id="ok" style="width:100%;padding:14px">Valider ma commande</button>
@@ -96,17 +102,29 @@ document.addEventListener('click', e => {
 });
 
 async function validate() {
-  const u = await me();
-  if (!u) {
-    location.href = 'compte/connexion.html?next=boutique/panier.html';
-    return;
-  }
   const pb = rows.map(issue).find(Boolean);
   if (pb) return toast('Corrigez le panier avant de valider : ' + pb.toLowerCase() + '.', 1);
-  const info = { name: u.full_name || '', lieu: $('#lieu').value.trim(), note: $('#note').value.trim() };
+  const nom = $('#nom').value.trim();
+  const info = { name: nom, lieu: $('#lieu').value.trim(), note: $('#note').value.trim() };
   cart.lieu.set(info.lieu);
+  try { localStorage.setItem(NOM, nom); } catch {}
   const b = $('#ok');
   b.disabled = true;
+  // Pas de compte demandé aux clientes : au premier achat, une session invisible (anonyme) est créée.
+  // Elle protège la commande et garde l'historique sur ce téléphone ; vendeuses et admins gardent leur connexion.
+  let { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    const r = await sb.auth.signInAnonymously({ options: { data: { full_name: nom } } });
+    if (r.error) {
+      toast('La commande n’a pas pu être enregistrée. Réessayez dans un instant ou écrivez directement à la vendeuse.', 1);
+      b.disabled = false;
+      return;
+    }
+    session = r.data.session;
+  } else if (session.user.is_anonymous && nom) {
+    await sb.from('profiles').update({ full_name: nom }).eq('id', session.user.id); // prénom donné à cette commande
+  }
+  if (!info.name && !session.user.is_anonymous) info.name = (await me())?.full_name || '';
   // Prix, option et stock sont revérifiés côté serveur par place_order (qui décompte aussi le stock).
   const { data, error } = await sb.rpc('place_order', {
     items: rows.map(r => ({ product_id: r.id, qty: r.qty, option: r.opt || null }))

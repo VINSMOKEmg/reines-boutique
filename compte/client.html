@@ -10,20 +10,27 @@
 <main id="app" class="w"></main>
 <footer class="foot" id="ftr"></footer></div></div>
 <script type="module">
-import { sb, requireRole } from './js/supabase.js';
+import { sb, me } from './js/supabase.js';
 import { $, esc, money, header, seller, logout, statusBadge, itemTxt } from './js/ui.js';
 import { HOME } from './js/supabase.js';
 header(); // en parallèle du contenu de la page : rien ici ne dépend de l'en-tête
 
-// Ouverte à tous les comptes : une vendeuse ou l'admin qui achète y retrouve aussi ses commandes.
-const u = await requireRole(['client', 'seller', 'admin']);
-if (!u) throw 0;
+// Ouverte à tous : une cliente sans compte y retrouve les commandes passées sur ce téléphone (session invisible
+// créée par le panier) ; une vendeuse ou l'admin qui achète y retrouve aussi ses commandes.
+const u = await me();
+const VENDEUSE = '<p class="mut" style="font-size:13px;margin-top:22px">Vous êtes vendeuse ou administratrice ? <a class="lnk" href="compte/connexion.html">Connectez-vous à votre espace</a></p>';
+if (!u) {
+  $('#app').innerHTML = `<h1>Mes commandes</h1><p class="mut">Pas besoin de compte pour commander : vos commandes s’afficheront ici, sur ce téléphone, dès votre premier achat.</p>
+  <p><a class="btn" href="boutique/catalogue.html">Découvrir la boutique</a></p>${VENDEUSE}`;
+  throw 0;
+}
 const attente = new URLSearchParams(location.search).has('attente');
-$('#app').innerHTML = `<h1>${u.role === 'client' ? `Bonjour ${esc(u.full_name)}` : 'Mes achats'}</h1>
+$('#app').innerHTML = `<h1>${u.role !== 'client' ? 'Mes achats' : u.full_name ? `Bonjour ${esc(u.full_name)}` : 'Mes commandes'}</h1>
 ${attente ? '<div class="note"><b>Votre numéro est reconnu comme membre du groupe.</b><br>L’administration doit maintenant valider votre boutique. Vous pourrez ensuite vous connecter avec votre numéro WhatsApp et gérer vos produits.</div>' : ''}
-<p style="display:flex;gap:8px;flex-wrap:wrap">${u.role !== 'client' ? `<a class="btn ghost sm" href="${HOME[u.role]}">Retour à mon espace</a>` : ''}<button class="btn ghost sm" id="lo">Déconnexion</button></p>
-<h2>Mes commandes</h2><div id="o">Chargement…</div>`;
-$('#lo').onclick = logout;
+${u.anon ? '<p class="mut" style="font-size:13px">Vos commandes sont enregistrées sur ce téléphone, sans compte.</p>'
+  : `<p style="display:flex;gap:8px;flex-wrap:wrap">${u.role !== 'client' ? `<a class="btn ghost sm" href="${HOME[u.role]}">Retour à mon espace</a>` : ''}<button class="btn ghost sm" id="lo">Déconnexion</button></p>`}
+<h2>Mes commandes</h2><div id="o">Chargement…</div>${u.anon ? VENDEUSE : ''}`;
+if ($('#lo')) $('#lo').onclick = logout;
 // Filtre explicite sur ses propres commandes (l'admin a le droit de toutes les lire).
 const { data } = await sb
   .from('orders')

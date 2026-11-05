@@ -17,7 +17,8 @@ export async function me() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return null;
   const { data } = await sb.from('profiles').select('id,role,full_name,email').eq('id', session.user.id).single();
-  return data;
+  // anon : cliente sans compte (session invisible créée par le panier), sans e-mail ni mot de passe.
+  return data && { ...data, anon: !!session.user.is_anonymous };
 }
 // Confort d'affichage uniquement : la vraie protection, ce sont les politiques RLS.
 // Non connectée -> page de connexion (puis retour ici) ; connectée avec un autre rôle -> son propre espace.

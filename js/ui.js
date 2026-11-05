@@ -28,7 +28,7 @@ export const logout = async () => { await unsubscribePush(); await sb.auth.signO
 
 export async function header() {
   let u = null; try { u = await me(); } catch {}
-  const home = { seller: 'vendeuse/dashboard.html', admin: 'admin/index.html', client: 'compte/client.html' }[u?.role] || 'compte/connexion.html';
+  const home = { seller: 'vendeuse/dashboard.html', admin: 'admin/index.html', client: 'compte/client.html' }[u?.role] || 'compte/client.html'; // sans compte : « Mes commandes » (sur ce téléphone)
   const who = u ? esc((u.full_name || 'Compte').split(' ')[0]) : 'Compte';
   const pg = here().split('?')[0] || 'index.html';
   const on = (...n) => n.includes(pg) ? ' class="on"' : '';
@@ -40,7 +40,7 @@ export async function header() {
   <nav class="tabs"><a href="index.html"${on('index.html', '')}>${ic('home')}Accueil</a><a href="boutique/catalogue.html#niches"${on('boutique/catalogue.html')}>${ic('gem')}Catégories</a><a href="boutique/vendeuses.html"${on('boutique/vendeuses.html')}>${ic('store')}Vendeuses</a><a href="boutique/panier.html"${on('boutique/panier.html')}>${ic('cart')}Panier</a><a href="${home}">${ic('user')}${who}</a></nav>
   <div class="ov" id="ov"></div><aside class="drawer" id="drawer" aria-label="Menu"><div class="dh"><a class="brand" href="index.html"><img src="assets/logo.png" alt=""><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a><button type="button" class="dx" data-close aria-label="Fermer">${ic('close')}</button></div>
   <a href="index.html">${ic('home')}Accueil</a><a href="boutique/catalogue.html">${ic('bag')}Boutique</a><a href="boutique/catalogue.html#niches">${ic('gem')}Catégories</a><a href="boutique/vendeuses.html">${ic('store')}Vendeuses</a><a href="boutique/catalogue.html?fav=1">${ic('heart')}Mes favoris</a><a href="infos/apropos.html">${ic('crown')}À propos</a><a href="infos/contact.html">${ic('chat')}Contact</a><hr>
-  <a href="boutique/panier.html">${ic('cart')}Mon panier</a><a href="${home}">${ic('user')}${u ? 'Mon espace' : 'Connexion'}</a>${u ? '<a href="#" id="dlo">' + ic('close') + 'Déconnexion</a>' : '<a href="compte/inscription.html">' + ic('user') + 'Créer un compte</a>'}</aside>`;
+  <a href="boutique/panier.html">${ic('cart')}Mon panier</a><a href="${home}">${ic('user')}${u && !u.anon ? 'Mon espace' : 'Mes commandes'}</a>${u && !u.anon ? '<a href="#" id="dlo">' + ic('close') + 'Déconnexion</a>' : '<a href="compte/connexion.html">' + ic('store') + 'Espace vendeuse</a>'}</aside>`;
   const bg = $('#bg'), tog = o => { document.body.classList.toggle('menu-open', o); bg.setAttribute('aria-expanded', o); };
   bg.onclick = () => tog(!document.body.classList.contains('menu-open')); $('#ov').onclick = () => tog(false);
   $('#drawer').addEventListener('click', e => { if (e.target.closest('a,[data-close]')) tog(false); });
@@ -64,8 +64,9 @@ export async function header() {
 // Pied de page commun à toutes les pages publiques (emplacement <footer id="ftr">).
 function footer(u, home) {
   const f = $('#ftr'); if (!f) return;
-  const acc = u ? [[home, 'Mon espace'], ['boutique/panier.html', 'Mon panier'], ['compte/client.html', u.role === 'client' ? 'Mes commandes' : 'Mes achats']]
-    : [['compte/connexion.html', 'Connexion'], ['compte/inscription.html', 'Créer un compte'], ['boutique/panier.html', 'Mon panier']];
+  // Les clientes commandent sans compte : la connexion n'est plus proposée qu'aux vendeuses et aux admins.
+  const acc = u && !u.anon ? [[home, 'Mon espace'], ['boutique/panier.html', 'Mon panier'], ['compte/client.html', u.role === 'client' ? 'Mes commandes' : 'Mes achats']]
+    : [['boutique/panier.html', 'Mon panier'], ['compte/client.html', 'Mes commandes'], ['compte/connexion.html', 'Espace vendeuse']];
   const col = (t, L) => `<nav class="ft-col" aria-label="${t}"><h4>${t}</h4>${L.map(([h, l]) => `<a href="${h}">${l}</a>`).join('')}</nav>`;
   f.innerHTML = `<div class="ft-top">
   <div class="ft-brand"><a class="brand" href="index.html"><img src="assets/logo.png" alt="Les Reines de l’Entrepreneuriat"><span><b>Les Reines</b><small>de l’Entrepreneuriat</small></span></a>
@@ -88,7 +89,7 @@ new MutationObserver(() => document.querySelectorAll('.rv:not(.seen)').forEach(e
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-add],[data-go]'); if (!a) return;
   cart.add(a.dataset.add || a.dataset.go);
-  if (a.dataset.go) { me().then(u => { location.href = u ? 'boutique/panier.html' : 'compte/connexion.html?next=boutique/panier.html'; }).catch(() => { location.href = 'compte/connexion.html?next=boutique/panier.html'; }); } else toast('Produit ajouté au panier');
+  if (a.dataset.go) location.href = 'boutique/panier.html'; // pas de compte demandé aux clientes else toast('Produit ajouté au panier');
 });
 export const mini = sp => sp?.logo_path ? `<img class="mi" src="${img(sp.logo_path)}" alt="">` : `<span class="mi">${esc((sp?.shop_name || '?')[0])}</span>`;
 export const card = p => `<div class="p"><a href="boutique/produit.html?id=${p.id}" class="ph"><img loading="lazy" src="${img(firstImg(p))}" alt="${esc(p.name)}">${promoOn(p) ? `<span class="pct">-${pct(p)} %</span>` : ''}<button type="button" class="heart ${favs().includes(p.id) ? 'on' : ''}" data-fav="${p.id}" aria-label="Favori">${ic('heart')}</button></a>

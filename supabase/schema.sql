@@ -37,7 +37,8 @@ create table product_images (
   path text not null, position int not null default 0);
 create table orders (
   id uuid primary key default gen_random_uuid(), ref text not null unique,
-  client_id uuid not null references profiles(id), created_at timestamptz not null default now());
+  client_id uuid not null references profiles(id), created_at timestamptz not null default now(),
+  client_ip_hash text);  -- empreinte de l'adresse internet : limite des commandes sans compte (session anonyme)
 create table seller_orders (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references orders(id) on delete cascade,
@@ -52,7 +53,7 @@ create table order_items (
   name text not null, unit_price integer not null, qty integer not null check (qty between 1 and 99),
   option text);
 create index on products(seller_id); create index on products(category_id);
-create index on product_images(product_id); create index on orders(client_id);
+create index on product_images(product_id); create index on orders(client_id); create index on orders(client_ip_hash, created_at);
 create index on seller_orders(seller_id); create index on seller_orders(order_id); create index on order_items(seller_order_id);
 create index order_items_product_id_idx on order_items(product_id);
 
@@ -119,10 +120,18 @@ end $$;
 -- Passage de commande : produit disponible, option valide, stock suffisant, 5 commandes par heure au plus.
 -- Prix, vendeuses et stock sont lus en base, jamais fournis par le navigateur ; le stock est décompté.
 create function place_order(items jsonb) returns jsonb language plpgsql security definer set search_path=public as $$
-declare uid uuid:=auth.uid(); oid uuid; base text; n int:=0; sid uuid; soid uuid; res jsonb:='[]'::jsonb;
+declare uid uuid:=auth.uid(); oid uuid; hdr json; iph text; base text; n int:=0; sid uuid; soid uuid; res jsonb:='[]'::jsonb;
         it jsonb; p record; q int; o text; need int; lines jsonb; tot int; shop record;
 begin
   if uid is null then raise exception 'Connexion requise'; end if;
+  -- Commande sans compte (session anonyme créée par le panier) : limite par connexion internet, en plus de la limite par compte.
+  -- Seule une empreinte de l'adresse est gardée. Limite large : beaucoup de clientes d'un même opérateur partagent une adresse.
+  hdr:=coalesce(nullif(current_setting('request.headers',true),''),'{}')::json;
+  iph:=md5('reines:'||nullif(trim(coalesce(hdr->>'cf-connecting-ip',split_part(hdr->>'x-forwarded-for',',',1),'')),''));
+  if coalesce((auth.jwt()->>'is_anonymous')::boolean,false) and iph is not null
+     and (select count(*) from orders where client_ip_hash=iph and created_at>now()-interval '1 hour')>=15 then
+    raise exception 'Beaucoup de commandes ont été passées depuis cette connexion : réessayez dans une heure ou écrivez directement à la vendeuse.';
+  end if;
   if jsonb_typeof(items)<>'array' or jsonb_array_length(items) not between 1 and 50 then raise exception 'Panier invalide'; end if;
   if (select count(*) from orders where client_id=uid and created_at>now()-interval '1 hour')>=5 then
     raise exception 'Vous avez passé beaucoup de commandes en peu de temps : réessayez dans une heure ou écrivez directement à la vendeuse.';
@@ -145,7 +154,7 @@ begin
     end if;
   end loop;
   base:='CMD-'||upper(substr(md5(gen_random_uuid()::text),1,6));
-  insert into orders(ref,client_id) values(base,uid) returning id into oid;
+  insert into orders(ref,client_id,client_ip_hash) values(base,uid,iph) returning id into oid;
   for sid in select distinct pr.seller_id from jsonb_array_elements(items) e join products pr on pr.id=(e->>'product_id')::uuid loop
     n:=n+1; lines:='[]'::jsonb;
     -- Prix payé = prix promo s'il existe, sinon prix normal (« regular » : prix barré, pour le message WhatsApp).

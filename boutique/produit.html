@@ -100,7 +100,7 @@ if (dispo) {
     const o = choix();
     if (o === null) return;
     cart.add(p.id, qty, o);
-    location.href = (await me()) ? 'boutique/panier.html' : 'compte/connexion.html?next=boutique/panier.html';
+    location.href = 'boutique/panier.html'; // pas de compte demandé aux clientes
   };
 }
 </script></body></html>

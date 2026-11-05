@@ -159,7 +159,7 @@ function overview(){const {MW,PR,S,P,C,O}=D,ST_=MW.map(stateOf);
 // ---------- Commandes ----------
 function orderTable(L){
  return '<div class="tw"><table><tr><th>Référence</th><th>Cliente</th><th>Boutique</th><th>Articles</th><th>Total</th><th>Statut</th></tr>'+L.map(x=>{const cl=x.orders?.profiles;
-  return `<tr><td><b>${esc(x.ref)}</b><br><small class="mut">${day(x.created_at)}</small></td><td>${esc(cl?.full_name||cl?.email||'—')}<br><small>${wa(cl?.phone)}</small></td><td>${esc(x.seller_profiles?.shop_name)}</td>
+  return `<tr><td><b>${esc(x.ref)}</b><br><small class="mut">${day(x.created_at)}</small></td><td>${esc(cl?.full_name||cl?.email||'Cliente')}<br>${cl?.email||cl?.phone?`<small>${wa(cl?.phone)}</small>`:'<small class="mut">sans compte (contact via WhatsApp)</small>'}</td><td>${esc(x.seller_profiles?.shop_name)}</td>
   <td><small>${x.order_items.map(itemTxt).join('<br>')}</small></td><td><b>${money(x.total)}</b></td><td>${statusSelect(x.status,`data-os="${x.id}"`)}</td></tr>`}).join('')+'</table></div>'}
 const NO_ORDER=cl=>empty('cart','Aucune commande pour le moment','Les commandes apparaissent ici dès qu’une cliente valide son panier.','',cl);
 function ordersView(){const {O}=D,F=[['all','Toutes'],['nouvelle','Nouvelles'],['confirmee','Confirmées'],['livree','Livrées'],['annulee','Annulées']];
