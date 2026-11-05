@@ -80,17 +80,34 @@ f.onsubmit = async e => {
   }
   const { error } = await sb.auth.signInWithPassword({ email, password: f.p.value });
   if (error) {
-    toast(
-      /not confirmed/i.test(error.message)
-        ? 'Confirmez d’abord votre e-mail (lien reçu à l’inscription), puis reconnectez-vous.'
-        : 'Identifiant ou mot de passe incorrect.',
-      1
-    );
+    const nc = /not confirmed/i.test(error.message);
+    toast(nc ? 'Confirmez d’abord votre e-mail (lien reçu à l’inscription), puis reconnectez-vous.' : 'Identifiant ou mot de passe incorrect.', 1);
+    if (nc) confirmBox(email);
     b.disabled = false;
     return;
   }
   go();
 };
+
+// E-mail jamais confirmé : on dit à quelle adresse le lien a été envoyé et on propose de le renvoyer.
+function confirmBox(email) {
+  $('#nc')?.remove();
+  f.insertAdjacentHTML(
+    'afterend',
+    `<div class="note" id="nc"><b>Votre e-mail n’est pas encore confirmé.</b><br>Le lien a été envoyé à <b>${esc(email)}</b>. Cherchez un message « Les Reines » dans votre boîte de réception, vos <b>spams</b> ou l’onglet <b>Promotions</b>, puis cliquez sur le lien.
+    <p style="margin:10px 0 0"><button type="button" class="btn sm" id="rs">Renvoyer l’e-mail de confirmation</button></p></div>`
+  );
+  $('#rs').onclick = async () => {
+    $('#rs').disabled = true;
+    const { error } = await sb.auth.resend({ type: 'signup', email, options: { emailRedirectTo: new URL('compte/connexion.html', ROOT).href } });
+    if (error) {
+      toast(/rate|limit|seconds/i.test(error.message) ? 'Patientez une minute avant de redemander un e-mail.' : error.message, 1);
+      $('#rs').disabled = false;
+      return;
+    }
+    toast('E-mail renvoyé à ' + email + '.');
+  };
+}
 
 // Mot de passe oublié : Supabase envoie un lien (à l'e-mail du compte) qui ramène ici avec une session temporaire.
 $('#fg').onclick = async e => {

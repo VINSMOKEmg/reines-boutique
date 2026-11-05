@@ -112,19 +112,21 @@ async function run(q,ok){const {error}=await q;toast(error?error.message:ok,!!er
 // ---------- Données ----------
 let D={},OF='all',PF='all';
 async function load(){
- const [mw,s,p,c,o]=await Promise.all([
+ const [mw,s,p,c,o,nc]=await Promise.all([
   sb.from('member_whitelist').select('*').order('created_at',{ascending:false}),
   sb.from('seller_profiles').select('*').order('created_at'),
   sb.from('products').select('id,name,description,price_fcfa,promo_price_fcfa,is_approved,is_available,stock,option_label,options,category_id,seller_id,created_at,seller_profiles(shop_name),product_images(path,position)').order('created_at',{ascending:false}).limit(500),
   sb.from('categories').select('id,name,icon').order('name'),
-  sb.from('seller_orders').select('id,ref,total,status,created_at,seller_id,seller_profiles(shop_name),orders(profiles(full_name,phone,email)),order_items(name,qty,option)').order('created_at',{ascending:false}).limit(200)]);
+  sb.from('seller_orders').select('id,ref,total,status,created_at,seller_id,seller_profiles(shop_name),orders(profiles(full_name,phone,email)),order_items(name,qty,option)').order('created_at',{ascending:false}).limit(200),
+  sb.rpc('admin_unconfirmed')]);
  for(const r of [mw,s,p,c,o])if(r.error)toast('Chargement incomplet : '+r.error.message,1);
  const MW=mw.data||[],S=s.data||[],phones=MW.map(x=>x.phone).filter(Boolean),emails=MW.map(x=>x.email).filter(Boolean);
  // Comptes utiles : propriétaires des boutiques et comptes portant le numéro ou l'e-mail d'une membre.
  const PS='id,email,phone,full_name,role,created_at',pq=await Promise.all([S.length&&sb.from('profiles').select(PS).in('id',S.map(x=>x.id)),
   phones.length&&sb.from('profiles').select(PS).in('phone',phones),emails.length&&sb.from('profiles').select(PS).in('email',emails)]);
  const PR=[...new Map(pq.flatMap(r=>r?.data||[]).map(x=>[x.id,x])).values()];
- D={MW,PR,S,P:p.data||[],C:c.data||[],O:o.data||[]};
+ // Comptes dont l'e-mail n'est pas confirmé : leur boutique ne peut pas être activée (connexion impossible).
+ D={MW,PR,S,P:p.data||[],C:c.data||[],O:o.data||[],NC:new Set(nc.data||[])};
  overview();ordersView();shopsView();membersView();productsView();nichesView()}
 
 // ---------- Membres : correspondance liste <-> comptes ----------
@@ -186,9 +188,10 @@ function membersView(){const {MW}=D;
  $('#ml').innerHTML=MW.length?'<div class="tw"><table><tr><th>Membre</th><th>État</th><th>Compte inscrit</th><th></th></tr>'+R.map(({w,acc,sh,st})=>{
   const badge={none:'<span class="badge">Pas encore inscrite</span>',pending:'<span class="badge warn-b">À valider</span>',active:'<span class="badge ok">Boutique active</span>',suspended:'<span class="badge no">Boutique suspendue</span>'}[st];
   // Compte(s) trouvé(s) : à valider un par un (plusieurs comptes avec le même numéro = vérifier auprès de la membre).
-  const cand=st==='pending'?acc.map(p=>`<div class="cand"><span><b>${esc(p.full_name||'Sans nom')}</b><small>${esc(p.email||'')} · inscrite le ${day(p.created_at)}</small></span>${btn('act',p.id,ic('check')+'Activer','btn sm')}</div>`).join('')
+  // Un compte non confirmé ne peut pas se connecter : pas de bouton Activer tant que la membre n'a pas cliqué sur le lien reçu.
+  const cand=st==='pending'?acc.map(p=>`<div class="cand"><span><b>${esc(p.full_name||'Sans nom')}</b><small>${esc(p.email||'')} · inscrite le ${day(p.created_at)}</small></span>${D.NC.has(p.id)?'<span class="badge warn-b" title="Elle doit cliquer sur le lien reçu par e-mail (pensez aux spams) avant activation.">E-mail non confirmé</span>':btn('act',p.id,ic('check')+'Activer','btn sm')}</div>`).join('')
    +(acc.length>1?'<p class="warn">Plusieurs comptes utilisent ce numéro : appelez la membre pour savoir lequel est le sien.</p>':'')
-   :sh.length?`<small>${esc(sh[0].shop_name)}</small>`:'<small class="mut">—</small>';
+   :sh.length?`<small>${esc(sh[0].shop_name)}</small>${sh.some(s=>D.NC.has(s.id))?'<p class="warn">E-mail du compte jamais confirmé : elle ne peut pas se connecter.</p>':''}`:'<small class="mut">—</small>';
   return `<tr class="${st==='pending'?'hl':''}"><td><b>${esc(w.full_name||'—')}</b><br>${w.phone?wa(w.phone):''}${w.email?`<br><small class="mut">${esc(w.email)}</small>`:''}</td><td>${badge}</td><td>${cand}</td><td style="text-align:right">${btn('rm',w.id,'Retirer')}</td></tr>`}).join('')+'</table></div>'
   :empty('user','Aucune membre pour le moment','Ajoutez ci-dessus le numéro WhatsApp de chaque vendeuse du groupe : c’est la première étape pour ouvrir les boutiques.')}
 

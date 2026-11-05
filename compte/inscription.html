@@ -13,7 +13,7 @@
 <footer class="foot" id="ftr"></footer></div></div>
 <script type="module">
 import { sb, me, ROOT, safeNext } from './js/supabase.js';
-import { $, toast, header, seller, normPhone, PHONE_ERR } from './js/ui.js';
+import { $, esc, toast, header, seller, normPhone, PHONE_ERR } from './js/ui.js';
 header(); // en parallèle du contenu de la page : rien ici ne dépend de l'en-tête
 
 $('#f').onsubmit = async e => {
@@ -38,6 +38,12 @@ $('#f').onsubmit = async e => {
     b.disabled = false;
     return;
   }
+  // E-mail déjà inscrit et confirmé : Supabase ne renvoie rien (aucun e-mail ne part), il faut se connecter.
+  if (!data.session && data.user && !data.user.identities?.length) {
+    toast('Un compte existe déjà avec cet e-mail : connectez-vous (ou « Mot de passe oublié ? »).', 1);
+    b.disabled = false;
+    return;
+  }
   if (data.session) {
     const { data: cm } = await sb.rpc('claim_membership');
     const u = await me();
@@ -45,8 +51,20 @@ $('#f').onsubmit = async e => {
     const nx = new URLSearchParams(location.search).get('next');
     location.href = u?.role === 'seller' ? 'vendeuse/profil-boutique.html' : safeNext(nx) || 'compte/client.html';
   } else {
-    toast('Compte créé. Confirmez votre e-mail, puis connectez-vous.');
-    b.disabled = false;
+    // Pas de session : il faut cliquer sur le lien reçu. On montre l'adresse pour repérer une faute de frappe.
+    const email = f.e.value.trim();
+    f.hidden = true;
+    f.insertAdjacentHTML(
+      'afterend',
+      `<div class="note"><b>Dernière étape : confirmez votre e-mail.</b><br>Un lien vient d’être envoyé à <b>${esc(email)}</b>. Cherchez un message « Les Reines » dans votre boîte de réception, vos <b>spams</b> ou l’onglet <b>Promotions</b>, puis cliquez sur le lien.<br><small class="mut">Ce n’est pas la bonne adresse ? Rechargez la page et recommencez avec la bonne. Ne créez pas d’autre compte avec la même adresse.</small>
+      <p style="margin:10px 0 0"><button type="button" class="btn sm" id="rs">Renvoyer l’e-mail</button></p></div>`
+    );
+    $('#rs').onclick = async () => {
+      $('#rs').disabled = true;
+      const { error } = await sb.auth.resend({ type: 'signup', email, options: { emailRedirectTo: new URL('compte/connexion.html', ROOT).href } });
+      toast(error ? (/rate|limit|seconds/i.test(error.message) ? 'Patientez une minute avant de redemander un e-mail.' : error.message) : 'E-mail renvoyé.', !!error);
+      if (error) $('#rs').disabled = false;
+    };
   }
 };
 </script></body></html>
