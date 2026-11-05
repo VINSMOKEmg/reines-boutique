@@ -284,3 +284,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulati
 #hdr.hdr-scrolled{box-shadow:0 6px 18px rgba(106,18,51,.08)}
 html{scroll-padding-top:170px}
 @media(max-width:900px){html{scroll-padding-top:80px}}
+/* Prix promotionnel : prix promo en bordeaux, prix normal barré et discret, remise en pastille sur la photo. */
+.pr.promo .now,.price.promo .now{color:var(--bd)}
+.pr .now,.price .now,.pr s,.price s{white-space:nowrap}
+.pr s,.price s{display:inline-block;color:var(--mut);font-weight:500;font-size:.8em;margin-left:4px;text-decoration-thickness:1.5px}
+.price s{font-family:Inter,system-ui,sans-serif;font-size:.62em}
+.pct{position:absolute;left:10px;top:10px;z-index:2;background:var(--bd);color:#fff;font:700 12px/1 Inter,system-ui,sans-serif;padding:6px 9px;border-radius:999px;letter-spacing:.02em}
+.pct-inline{display:inline-block;vertical-align:middle;background:var(--bd);color:#fff;font:700 13px/1 Inter,system-ui,sans-serif;padding:6px 10px;border-radius:999px;margin-left:8px}

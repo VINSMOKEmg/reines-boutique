@@ -12,7 +12,7 @@
 <script type="module">
 import { sb, me } from './js/supabase.js';
 import * as cart from './js/cart.js';
-import { $, esc, money, img, firstImg, toast, PSEL, header } from './js/ui.js';
+import { $, esc, money, img, firstImg, toast, PSEL, header, unitPrice, priceHtml } from './js/ui.js';
 header(); // en parallèle du contenu de la page : rien ici ne dépend de l'en-tête
 await cart.ready; // panier du compte récupéré (connectée)
 
@@ -20,7 +20,7 @@ await cart.ready; // panier du compte récupéré (connectée)
 let rows = [];
 const maxOf = p => (p.stock == null ? 99 : Math.min(99, p.stock)); // stock vide = illimité
 const qtyOf = id => rows.filter(r => r.id === id).reduce((a, r) => a + r.qty, 0); // quantité totale d'un produit
-const total = () => rows.reduce((a, r) => a + r.qty * r.p.price_fcfa, 0);
+const total = () => rows.reduce((a, r) => a + r.qty * unitPrice(r.p), 0);
 const nb = () => rows.reduce((a, r) => a + r.qty, 0);
 
 async function load() {
@@ -60,9 +60,9 @@ function draw() {
         const pb = issue(r);
         return `<div class="line"><img src="${img(firstImg(r.p))}" alt="">
       <div class="g"><b>${esc(r.p.name)}</b>${r.opt ? ` <small class="mut">(${esc(r.p.option_label || 'Option')} : ${esc(r.opt)})</small>` : ''}<br>
-        <small class="mut">${esc(r.p.seller_profiles.shop_name)} · ${money(r.p.price_fcfa)}</small>${pb ? `<br><small style="color:#b42318">${pb}</small>` : ''}</div>
+        <small class="mut">${esc(r.p.seller_profiles.shop_name)} · ${priceHtml(r.p)}</small>${pb ? `<br><small style="color:#b42318">${pb}</small>` : ''}</div>
       <div class="q"><button data-q="${esc(r.k)}" data-d="-1" aria-label="Moins">−</button>${r.qty}<button data-q="${esc(r.k)}" data-d="1" aria-label="Plus">+</button></div>
-      <b>${money(r.qty * r.p.price_fcfa)}</b><button class="btn ghost sm" data-q="${esc(r.k)}" data-d="-99">Retirer</button></div>`;
+      <b>${money(r.qty * unitPrice(r.p))}</b><button class="btn ghost sm" data-q="${esc(r.k)}" data-d="-99">Retirer</button></div>`;
       })
       .join('') +
     `<div class="cart-total" style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 14px"><button class="btn ghost sm" id="vd">Vider le panier</button>

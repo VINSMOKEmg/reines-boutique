@@ -23,12 +23,14 @@ create table products (
   name text not null check (char_length(name) between 2 and 120),
   description text default '' check (char_length(description) <= 2000),
   price_fcfa integer not null check (price_fcfa > 0 and price_fcfa <= 100000000),
+  promo_price_fcfa integer,  -- prix promotionnel facultatif (prix normal barré)
   stock integer check (stock >= 0),  -- vide = illimité ; décompté à chaque commande
   option_label text check (option_label is null or char_length(option_label) <= 30),  -- ex. « Taille »
   options text[] check (options is null or cardinality(options) <= 20),               -- ex. {S,M,L}
   is_available boolean not null default true,
   is_approved boolean not null default true,
-  created_at timestamptz not null default now());
+  created_at timestamptz not null default now(),
+  constraint products_promo_check check (promo_price_fcfa is null or (promo_price_fcfa > 0 and promo_price_fcfa < price_fcfa)));
 create table product_images (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references products(id) on delete cascade,
@@ -146,8 +148,9 @@ begin
   insert into orders(ref,client_id) values(base,uid) returning id into oid;
   for sid in select distinct pr.seller_id from jsonb_array_elements(items) e join products pr on pr.id=(e->>'product_id')::uuid loop
     n:=n+1; lines:='[]'::jsonb;
+    -- Prix payé = prix promo s'il existe, sinon prix normal (« regular » : prix barré, pour le message WhatsApp).
     -- Total calculé avant l'insertion : l'alerte en direct de la vendeuse reçoit le bon montant.
-    select coalesce(sum(least(greatest(coalesce((e->>'qty')::int,1),1),99)*pr.price_fcfa),0) into tot
+    select coalesce(sum(least(greatest(coalesce((e->>'qty')::int,1),1),99)*coalesce(pr.promo_price_fcfa,pr.price_fcfa)),0) into tot
       from jsonb_array_elements(items) e join products pr on pr.id=(e->>'product_id')::uuid where pr.seller_id=sid;
     insert into seller_orders(order_id,seller_id,ref,total) values(oid,sid,base||'-'||n,tot) returning id into soid;
     tot:=0;
@@ -156,9 +159,9 @@ begin
       if not found then continue; end if;
       q:=least(greatest(coalesce((it->>'qty')::int,1),1),99);
       o:=case when coalesce(cardinality(p.options),0)>0 then nullif(trim(coalesce(it->>'option','')),'') end;
-      insert into order_items(seller_order_id,product_id,name,unit_price,qty,option) values(soid,p.id,p.name,p.price_fcfa,q,o);
-      tot:=tot+q*p.price_fcfa;
-      lines:=lines||jsonb_build_array(jsonb_build_object('name',p.name,'qty',q,'price',p.price_fcfa,'option',o,'option_label',p.option_label));
+      insert into order_items(seller_order_id,product_id,name,unit_price,qty,option) values(soid,p.id,p.name,coalesce(p.promo_price_fcfa,p.price_fcfa),q,o);
+      tot:=tot+q*coalesce(p.promo_price_fcfa,p.price_fcfa);
+      lines:=lines||jsonb_build_array(jsonb_build_object('name',p.name,'qty',q,'price',coalesce(p.promo_price_fcfa,p.price_fcfa),'regular',case when p.promo_price_fcfa is not null then p.price_fcfa end,'option',o,'option_label',p.option_label));
     end loop;
     select shop_name, whatsapp into shop from seller_profiles where id=sid;
     res:=res||jsonb_build_array(jsonb_build_object('ref',base||'-'||n,'shop_name',shop.shop_name,'whatsapp',shop.whatsapp,'total',tot,'items',lines));

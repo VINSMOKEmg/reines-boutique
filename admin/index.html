@@ -26,7 +26,7 @@
 <dialog id="dl"><form class="f" id="df"></form></dialog>
 <script type="module">
 import {sb,requireRole} from './js/supabase.js';
-import {$,esc,money,img,toast,logout,ic,ICONS,normPhone,PHONE_ERR,statusSelect,itemTxt,stockTxt,setupAlerts,shrinkImage} from './js/ui.js';
+import {$,esc,money,img,toast,logout,ic,ICONS,normPhone,PHONE_ERR,statusSelect,itemTxt,stockTxt,setupAlerts,shrinkImage,priceHtml} from './js/ui.js';
 const a=await requireRole(['admin']);if(!a)throw 0;
 
 const CAT_ICONS=Object.keys(ICONS).slice(0,16);  // les 16 premières icônes sont celles des niches
@@ -115,7 +115,7 @@ async function load(){
  const [mw,s,p,c,o]=await Promise.all([
   sb.from('member_whitelist').select('*').order('created_at',{ascending:false}),
   sb.from('seller_profiles').select('*').order('created_at'),
-  sb.from('products').select('id,name,description,price_fcfa,is_approved,is_available,stock,option_label,options,category_id,seller_id,created_at,seller_profiles(shop_name),product_images(path,position)').order('created_at',{ascending:false}).limit(500),
+  sb.from('products').select('id,name,description,price_fcfa,promo_price_fcfa,is_approved,is_available,stock,option_label,options,category_id,seller_id,created_at,seller_profiles(shop_name),product_images(path,position)').order('created_at',{ascending:false}).limit(500),
   sb.from('categories').select('id,name,icon').order('name'),
   sb.from('seller_orders').select('id,ref,total,status,created_at,seller_id,seller_profiles(shop_name),orders(profiles(full_name,phone,email)),order_items(name,qty,option)').order('created_at',{ascending:false}).limit(200)]);
  for(const r of [mw,s,p,c,o])if(r.error)toast('Chargement incomplet : '+r.error.message,1);
@@ -198,7 +198,7 @@ function productsView(){const q=$('#pq').value.trim().toLowerCase(),{P,C}=D,cat=
  $('#pf').innerHTML=F.map(([k,l,t])=>`<button type="button" class="chip${PF===k?' on':''}" data-act="pf" data-id="${k}">${l} <i>${P.filter(t).length}</i></button>`).join('');
  const L=P.filter(f).filter(x=>!q||x.name.toLowerCase().includes(q)||(x.seller_profiles?.shop_name||'').toLowerCase().includes(q));
  $('#pl').innerHTML=L.length?'<div class="tw"><table><tr><th>Produit</th><th>Niche</th><th>Prix</th><th>État</th><th></th></tr>'+L.map(x=>{const im=[...x.product_images].sort((a,b)=>a.position-b.position)[0];
-  return `<tr><td><div class="cell"><img class="th" src="${img(im?.path)}" alt=""><span><b>${esc(x.name)}</b><br><small class="mut">${esc(x.seller_profiles?.shop_name)}</small></span></div></td><td><small>${esc(cat(x.category_id))}</small></td><td><b>${money(x.price_fcfa)}</b></td>
+  return `<tr><td><div class="cell"><img class="th" src="${img(im?.path)}" alt=""><span><b>${esc(x.name)}</b><br><small class="mut">${esc(x.seller_profiles?.shop_name)}</small></span></div></td><td><small>${esc(cat(x.category_id))}</small></td><td class="pr"><b>${priceHtml(x)}</b></td>
   <td><span class="badge ${x.is_approved?'ok':'no'}">${x.is_approved?'Publié':'Désactivé'}</span>${x.is_available?'':' <span class="badge">Indisponible</span>'}${stockTxt(x)?`<br><small class="mut">${stockTxt(x)}</small>`:''}</td>
   <td><div class="acts-row"><a class="btn ghost sm" href="boutique/produit.html?id=${x.id}" target="_blank" title="Voir">${ic('ext')}</a>${btn('ep',x.id,ic('edit')+'Modifier')}${btn('ap',x.id,x.is_approved?'Désactiver':'Réactiver','btn ghost sm',` data-v="${x.is_approved}"`)}${btn('dp',x.id,ic('trash'),'btn ghost sm',' title="Supprimer"')}</div></td></tr>`}).join('')+'</table></div>'
   :P.length?empty('box','Aucun produit ne correspond','Modifiez la recherche ou le filtre.'):empty('box','Aucun produit pour le moment','Les produits apparaissent ici dès qu’une vendeuse les publie depuis son espace.')}
@@ -233,10 +233,12 @@ const ACTS={
    const {error}=await sb.from('seller_profiles').update(o).eq('id',x.id);if(error)throw error})},
  ap:(id,b)=>run(sb.from('products').update({is_approved:b.dataset.v!=='true'}).eq('id',id),b.dataset.v==='true'?'Produit désactivé':'Produit réactivé'),
  ep:id=>{const x=D.P.find(y=>y.id===id);
-  edit('Modifier le produit',[{k:'name',l:'Nom',v:x.name},{k:'price',l:'Prix (FCFA)',t:'number',v:x.price_fcfa},{k:'cat',l:'Niche',t:'select',o:D.C.map(c=>[c.id,c.name]),v:x.category_id},{k:'description',l:'Description',t:'area',v:x.description}],async v=>{
+  edit('Modifier le produit',[{k:'name',l:'Nom',v:x.name},{k:'price',l:'Prix (FCFA)',t:'number',v:x.price_fcfa},{k:'promo',l:'Prix promo (FCFA, vide = pas de promo)',t:'number',v:x.promo_price_fcfa??''},{k:'cat',l:'Niche',t:'select',o:D.C.map(c=>[c.id,c.name]),v:x.category_id},{k:'description',l:'Description',t:'area',v:x.description}],async v=>{
    const price=Number(v.price);if(!Number.isInteger(price)||price<1)throw new Error('Prix invalide : un nombre entier de FCFA, supérieur à 0.');
+   const promo=String(v.promo).trim()===''?null:Number(v.promo);
+   if(promo!==null&&(!Number.isInteger(promo)||promo<1||promo>=price))throw new Error('Prix promo invalide : un nombre entier plus bas que le prix, ou laissez vide.');
    if(v.name.trim().length<2)throw new Error('Nom de produit trop court.');
-   const {error}=await sb.from('products').update({name:v.name.trim(),price_fcfa:price,category_id:v.cat||null,description:v.description.trim()}).eq('id',x.id);if(error)throw error})},
+   const {error}=await sb.from('products').update({name:v.name.trim(),price_fcfa:price,promo_price_fcfa:promo,category_id:v.cat||null,description:v.description.trim()}).eq('id',x.id);if(error)throw error})},
  dp:async id=>{const x=D.P.find(y=>y.id===id);
   if(!confirm(`Supprimer définitivement « ${x.name} » et ses photos ?\nLes commandes passées gardent leur historique.`))return;
   const {error}=await sb.from('products').delete().eq('id',x.id);if(error)return toast(error.message,1);

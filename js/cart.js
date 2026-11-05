@@ -59,7 +59,7 @@ export const waMessage = (o, x = {}) => [
   '',
   'Je souhaite commander sur *Les Reines de l’Entrepreneuriat* :',
   '',
-  ...o.items.map(i => `▪️ ${i.qty} × ${i.name}${i.option ? ` (${i.option_label || 'Option'} : ${i.option})` : ''} — ${fmt(i.qty * i.price)}`),
+  ...o.items.map(i => `▪️ ${i.qty} × ${i.name}${i.option ? ` (${i.option_label || 'Option'} : ${i.option})` : ''} — ${fmt(i.qty * i.price)}${i.regular ? ` (promo, au lieu de ${fmt(i.qty * i.regular)})` : ''}`),
   '',
   `*Total : ${fmt(o.total)}*`,
   `Référence : *${o.ref}*`,

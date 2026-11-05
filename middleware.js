@@ -24,10 +24,11 @@ export default async function middleware(request) {
   let t, d, image;
   try {
     if (/^[0-9a-f-]{36}$/i.test(id) && !shop) {
-      const p = await get(`products?id=eq.${id}&select=name,price_fcfa,description,seller_profiles(shop_name),product_images(path,position)`);
+      const p = await get(`products?id=eq.${id}&select=name,price_fcfa,promo_price_fcfa,description,seller_profiles(shop_name),product_images(path,position)`);
       if (p) {
         const im = (p.product_images || []).sort((a, b) => a.position - b.position)[0];
-        t = `${p.name} — ${fcfa(p.price_fcfa)}`;
+        const promo = p.promo_price_fcfa != null && p.promo_price_fcfa < p.price_fcfa;
+        t = promo ? `${p.name} — ${fcfa(p.promo_price_fcfa)} au lieu de ${fcfa(p.price_fcfa)}` : `${p.name} — ${fcfa(p.price_fcfa)}`;
         d = `${p.seller_profiles?.shop_name ? 'Par ' + p.seller_profiles.shop_name + ' · ' : ''}${cut(p.description, 140) || 'Une création des Reines de l’Entrepreneuriat, à commander sur WhatsApp.'}`;
         image = media(im?.path);
       }

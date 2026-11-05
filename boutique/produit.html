@@ -15,7 +15,7 @@
 <script type="module">
 import { sb, me } from './js/supabase.js';
 import * as cart from './js/cart.js';
-import { $, esc, money, img, toast, header, ic, favs, mini } from './js/ui.js';
+import { $, esc, money, img, toast, header, ic, favs, mini, promoOn, priceHtml, pct } from './js/ui.js';
 header(); // en parallèle du contenu de la page : rien ici ne dépend de l'en-tête
 
 const id = new URLSearchParams(location.search).get('id');
@@ -52,7 +52,7 @@ $('#pd').innerHTML =
   <div class="ph big"><img id="big" src="${img(I[0].path)}" alt="${esc(p.name)}"><button type="button" class="heart ${favs().includes(p.id) ? 'on' : ''}" data-fav="${p.id}" aria-label="Favori">${ic('heart')}</button></div></div>
 <div class="info"><h1>${esc(p.name)}</h1>
   <a class="sline" href="boutique/vendeuse.html?id=${S.id}">${mini(S)}<span>${esc(S.shop_name)}<br><small class="mut">${esc(S.location || '')}</small></span></a>
-  <div class="price">${money(p.price_fcfa)}</div><p>${esc(p.description)}</p>
+  <div class="price${promoOn(p) ? ' promo' : ''}">${priceHtml(p)}${promoOn(p) ? ` <span class="pct-inline">-${pct(p)} %</span>` : ''}</div><p>${esc(p.description)}</p>
   ${
     dispo
       ? `

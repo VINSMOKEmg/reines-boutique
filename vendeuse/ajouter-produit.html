@@ -9,7 +9,7 @@
 <div class="app-shell"><aside class="app-side" id="sidebar"></aside><main class="app-main"><header class="app-top" id="top"></header><div id="bn"></div><div id="app"></div></main></div>
 <script type="module">
 import {sb} from './js/supabase.js';
-import {$,esc,money,img,toast,ic,seller,empty,shrinkImage} from './js/ui.js';
+import {$,esc,money,img,toast,ic,seller,empty,shrinkImage,promoOn,priceHtml} from './js/ui.js';
 // Même page pour ajouter (sans ?id) et modifier (?id=…) ; vendeuse/modifier-produit.html redirige ici.
 const id=new URLSearchParams(location.search).get('id');
 const S=await seller('vendeuse/ajouter-produit.html',{title:id?'Modifier le produit':'Ajouter un produit',
@@ -28,7 +28,9 @@ $('#app').innerHTML=`<div class="form-layout"><div class="panel"><form id="f" cl
  <h2 class="sect">Le produit</h2>
  <label>Nom du produit<input name="name" required maxlength="120" value="${esc(p?.name||'')}"></label>
  <label>Description<span class="hint">Matière, taille, couleur, délai de fabrication… ce qui aide la cliente à choisir.</span><textarea name="description" rows="5" maxlength="2000">${esc(p?.description||'')}</textarea></label>
- <div class="two"><label>Prix (FCFA)<input type="number" name="price" required min="1" max="100000000" step="1" value="${p?.price_fcfa||''}"></label><label>Stock<span class="hint">Laissez vide si illimité (plats, services…).</span><input type="number" name="stock" min="0" step="1" placeholder="Illimité" value="${p?.stock??''}"></label></div>
+ <div class="two"><label>Prix (FCFA)<span class="hint">Le prix normal.</span><input type="number" name="price" required min="1" max="100000000" step="1" value="${p?.price_fcfa||''}"></label>
+ <label>Prix promo (FCFA)<span class="hint">Facultatif. Plus bas que le prix normal, qui s’affichera barré. Videz le champ pour arrêter la promo.</span><input type="number" name="promo" min="1" max="100000000" step="1" placeholder="Pas de promo" value="${p?.promo_price_fcfa??''}"></label></div>
+ <label>Stock<span class="hint">Laissez vide si illimité (plats, services…).</span><input type="number" name="stock" min="0" step="1" placeholder="Illimité" value="${p?.stock??''}"></label>
  <label>Niche<select name="cat" required><option value="">Choisir…</option>${(cats||[]).map(c=>`<option value="${c.id}"${c.id===p?.category_id?' selected':''}>${esc(c.name)}</option>`).join('')}</select></label>
  <label class="switch"><input type="checkbox" name="av"${p&&!p.is_available?'':' checked'}> Disponible à la commande</label>
  <h2 class="sect">Option (facultatif)</h2>
@@ -41,12 +43,14 @@ $('#app').innerHTML=`<div class="form-layout"><div class="panel"><form id="f" cl
  <div class="form-actions"><button class="btn">${p?'Enregistrer les modifications':'Publier le produit'}</button><a class="btn ghost" href="vendeuse/mes-produits.html">Annuler</a></div>
 </form></div>
 <aside class="panel sticky"><div class="panel-h"><h2>Aperçu</h2></div>
- <div class="p"><div class="ph"><img id="pi" src="${img(im[0]?.path)}" alt=""></div><div class="pb"><b id="pn">${esc(p?.name||'Nom du produit')}</b><div class="pr" id="pp">${p?money(p.price_fcfa):'0 FCFA'}</div><div class="sl">${esc(shop.shop_name)}</div></div></div>
+ <div class="p"><div class="ph"><img id="pi" src="${img(im[0]?.path)}" alt=""></div><div class="pb"><b id="pn">${esc(p?.name||'Nom du produit')}</b><div class="pr${p&&promoOn(p)?' promo':''}" id="pp">${p?priceHtml(p):'0 FCFA'}</div><div class="sl">${esc(shop.shop_name)}</div></div></div>
  <p class="mut" style="font-size:12.5px;margin:10px 0 0">Voici comment la carte apparaîtra dans la boutique.</p></aside></div>`;
 
 const f=$('#f');
 f.name.oninput=()=>$('#pn').textContent=f.name.value||'Nom du produit';
-f.price.oninput=()=>$('#pp').textContent=money(f.price.value||0);
+// Aperçu du prix : promo valide (plus basse que le prix) = prix promo + prix normal barré.
+const pv=()=>{const x={price_fcfa:Number(f.price.value)||0,promo_price_fcfa:f.promo.value===''?null:Number(f.promo.value)};$('#pp').className='pr'+(promoOn(x)?' promo':'');$('#pp').innerHTML=priceHtml(x)};
+f.price.oninput=pv;f.promo.oninput=pv;
 f.ph.onchange=()=>{const x=f.ph.files[0];if(x)$('#pi').src=URL.createObjectURL(x)};
 document.querySelectorAll('[data-r]').forEach(b=>b.onclick=async()=>{if(!confirm('Retirer cette photo ?'))return;
  await sb.storage.from('shop-media').remove([b.dataset.p]);const {error}=await sb.from('product_images').delete().eq('id',b.dataset.r);
@@ -55,8 +59,11 @@ f.onsubmit=async e=>{e.preventDefault();const bt=f.querySelector('button:not([ty
  try{const files=await Promise.all([...f.ph.files].map(x=>shrinkImage(x))); // réduites avant le contrôle de taille
  for(const x of files)if(!IMG_OK(x))throw new Error('Image invalide : JPG, PNG ou WebP, 3 Mo maximum.');
   const price=Number(f.price.value);if(!Number.isInteger(price)||price<1)throw new Error('Prix invalide : un nombre entier de FCFA.');
+  const promo=f.promo.value===''?null:Number(f.promo.value);
+  if(promo!==null&&(!Number.isInteger(promo)||promo<1))throw new Error('Prix promo invalide : un nombre entier de FCFA, ou laissez vide.');
+  if(promo!==null&&promo>=price)throw new Error('Le prix promo doit être plus bas que le prix normal.');
   // seller_id n'est pas envoyé : il est imposé par la base (auth.uid()) et vérifié par RLS.
-  const v={name:f.name.value.trim(),description:f.description.value.trim(),price_fcfa:price,category_id:f.cat.value,stock:f.stock.value===''?null:Math.max(0,Math.floor(Number(f.stock.value))),is_available:f.av.checked};
+  const v={name:f.name.value.trim(),description:f.description.value.trim(),price_fcfa:price,promo_price_fcfa:promo,category_id:f.cat.value,stock:f.stock.value===''?null:Math.max(0,Math.floor(Number(f.stock.value))),is_available:f.av.checked};
   // Option : choix uniques, sans vide ; sans choix, pas d'option.
   const ch=[...new Set(f.ochoices.value.split(',').map(x=>x.trim()).filter(Boolean))];
   if(ch.length>20)throw new Error('20 choix au maximum pour une option.');
