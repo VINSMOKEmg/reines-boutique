@@ -171,10 +171,17 @@ export async function shrinkImage(f, max = 1280) {
     const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
     const k = Math.min(1, max / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
     c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const g = c.getContext('2d');
+    g.drawImage(bmp, 0, 0, c.width, c.height);
     const blob = t => new Promise(r => c.toBlob(r, t, .82)), alpha = f.type !== 'image/jpeg';
     let b = await blob(alpha ? 'image/webp' : 'image/jpeg');
-    if (!b || !/^image\/(jpeg|webp)$/.test(b.type)) { if (alpha) return f; b = await blob('image/jpeg'); } // navigateur sans encodeur WebP
+    // Safari (iPhone) ne sait pas produire de WebP : PNG -> JPEG sur fond blanc (sinon les zones transparentes deviennent noires).
+    if (!b || !/^image\/(jpeg|webp)$/.test(b.type)) {
+      g.globalCompositeOperation = 'destination-over';
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, c.width, c.height);
+      b = await blob('image/jpeg');
+    }
     if (!b || b.size >= f.size) return f;
     return new File([b], f.name.replace(/\.\w+$/, '') + (b.type === 'image/webp' ? '.webp' : '.jpg'), { type: b.type });
   } catch { return f; }

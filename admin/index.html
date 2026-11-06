@@ -112,13 +112,13 @@ async function run(q,ok){const {error}=await q;toast(error?error.message:ok,!!er
 // ---------- Données ----------
 let D={},OF='all',PF='all';
 async function load(){
- const [mw,s,p,c,o,nc]=await Promise.all([
+ const [mw,s,p,c,o,nc,om]=await Promise.all([
   sb.from('member_whitelist').select('*').order('created_at',{ascending:false}),
   sb.from('seller_profiles').select('*').order('created_at'),
   sb.from('products').select('id,name,description,price_fcfa,promo_price_fcfa,is_approved,is_available,stock,option_label,options,category_id,seller_id,created_at,seller_profiles(shop_name),product_images(path,position)').order('created_at',{ascending:false}).limit(500),
   sb.from('categories').select('id,name,icon').order('name'),
   sb.from('seller_orders').select('id,ref,total,status,created_at,seller_id,seller_profiles(shop_name),orders(profiles(full_name,phone,email)),order_items(name,qty,option)').order('created_at',{ascending:false}).limit(200),
-  sb.rpc('admin_unconfirmed')]);
+  sb.rpc('admin_unconfirmed'),sb.rpc('admin_orphan_media')]);
  for(const r of [mw,s,p,c,o])if(r.error)toast('Chargement incomplet : '+r.error.message,1);
  const MW=mw.data||[],S=s.data||[],phones=MW.map(x=>x.phone).filter(Boolean),emails=MW.map(x=>x.email).filter(Boolean);
  // Comptes utiles : propriétaires des boutiques et comptes portant le numéro ou l'e-mail d'une membre.
@@ -126,7 +126,7 @@ async function load(){
   phones.length&&sb.from('profiles').select(PS).in('phone',phones),emails.length&&sb.from('profiles').select(PS).in('email',emails)]);
  const PR=[...new Map(pq.flatMap(r=>r?.data||[]).map(x=>[x.id,x])).values()];
  // Comptes dont l'e-mail n'est pas confirmé : leur boutique ne peut pas être activée (connexion impossible).
- D={MW,PR,S,P:p.data||[],C:c.data||[],O:o.data||[],NC:new Set(nc.data||[])};
+ D={MW,PR,S,P:p.data||[],C:c.data||[],O:o.data||[],NC:new Set(nc.data||[]),OM:om.data||[]};
  overview();ordersView();shopsView();membersView();productsView();nichesView()}
 
 // ---------- Membres : correspondance liste <-> comptes ----------
@@ -153,6 +153,13 @@ function overview(){const {MW,PR,S,P,C,O}=D,ST_=MW.map(stateOf);
   [nWait,`${pl(nWait,'membre','membres')} pas encore ${pl(nWait,'inscrite','inscrites')} sur le site`,'membres'],[nSus,`${pl(nSus,'boutique suspendue','boutiques suspendues')}`,'vendeuses'],[nOff,`${pl(nOff,'produit désactivé','produits désactivés')}`,'produits']].filter(t=>t[0]);
  $('#todo').innerHTML=T.length?'<ul class="todo">'+T.map(([n,l,k])=>`<li><a href="#${k}"><b>${n}</b><span>${l}</span><span class="lnk">Voir →</span></a></li>`).join('')+'</ul>'
   :`<p class="ok-line"><span class="ck">${ic('check')}</span>Tout est à jour, rien à traiter.</p>`;
+ // Photos qui ne servent plus (image remplacée, produit ou compte supprimé) : à effacer pour ne pas remplir le stockage.
+ const OM=D.OM,mo=OM.reduce((s,x)=>s+Number(x.size),0)/1048576;
+ if(OM.length){$('#todo').insertAdjacentHTML('beforeend',`<p class="row" style="margin-top:10px;align-items:center"><span class="mut">${OM.length} ${pl(OM.length,'photo inutilisée','photos inutilisées')} (${mo.toFixed(1).replace('.',',')} Mo)</span><button type="button" class="btn sm ghost" id="om">Nettoyer</button></p>`);
+  $('#om').onclick=async()=>{if(!confirm(`Effacer définitivement ${OM.length} ${pl(OM.length,'photo','photos')} qui ne ${OM.length>1?'sont':'est'} plus ${pl(OM.length,'utilisée','utilisées')} nulle part sur le site ?`))return;
+   $('#om').disabled=true;let err=null;
+   for(let i=0;i<OM.length;i+=100){const {error}=await sb.storage.from('shop-media').remove(OM.slice(i,i+100).map(x=>x.name));if(error)err=error}
+   toast(err?err.message:'Stockage nettoyé',!!err);load()}}
  const top=[...S].sort((x,y)=>P.filter(p=>p.seller_id===y.id).length-P.filter(p=>p.seller_id===x.id).length).slice(0,5);
  $('#tops').innerHTML=top.length?top.map(x=>{const n=P.filter(p=>p.seller_id===x.id).length;return `<a class="mini-row" href="boutique/vendeuse.html?id=${x.id}" target="_blank">${logo(x)}<span><b>${esc(x.shop_name)}</b><small>${esc(x.location||'')}</small></span><em>${n} ${pl(n,'produit')}</em></a>`}).join('')
   :empty('store','Aucune boutique','Les boutiques apparaissent quand les membres se connectent.','<a class="btn sm" href="#membres">Ajouter une membre</a>','sm');
@@ -233,7 +240,8 @@ const ACTS={
    const o={shop_name:v.shop_name.trim(),whatsapp:w,location:v.location.trim(),description:v.description.trim()},fl=await shrinkImage(f.logo.files[0],600);
    if(fl){if(!IMG_OK(fl))throw new Error('Image invalide : JPG, PNG ou WebP, 3 Mo maximum.');
     const path=`${x.id}/logo-${Date.now()}.${fl.type.split('/')[1]}`,u=await sb.storage.from('shop-media').upload(path,fl,{contentType:fl.type});if(u.error)throw u.error;o.logo_path=path}
-   const {error}=await sb.from('seller_profiles').update(o).eq('id',x.id);if(error)throw error})},
+   const {error}=await sb.from('seller_profiles').update(o).eq('id',x.id);if(error)throw error;
+   if(o.logo_path&&x.logo_path)await sb.storage.from('shop-media').remove([x.logo_path])})}, // ancien logo effacé du stockage
  ap:(id,b)=>run(sb.from('products').update({is_approved:b.dataset.v!=='true'}).eq('id',id),b.dataset.v==='true'?'Produit désactivé':'Produit réactivé'),
  ep:id=>{const x=D.P.find(y=>y.id===id);
   edit('Modifier le produit',[{k:'name',l:'Nom',v:x.name},{k:'price',l:'Prix (FCFA)',t:'number',v:x.price_fcfa},{k:'promo',l:'Prix promo (FCFA, vide = pas de promo)',t:'number',v:x.promo_price_fcfa??''},{k:'cat',l:'Niche',t:'select',o:D.C.map(c=>[c.id,c.name]),v:x.category_id},{k:'description',l:'Description',t:'area',v:x.description}],async v=>{
