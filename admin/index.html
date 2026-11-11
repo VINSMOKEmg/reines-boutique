@@ -26,7 +26,7 @@
 <dialog id="dl"><form class="f" id="df"></form></dialog>
 <script type="module">
 import {sb,requireRole} from './js/supabase.js';
-import {$,esc,money,img,toast,logout,ic,ICONS,normPhone,PHONE_ERR,statusSelect,itemTxt,stockTxt,setupAlerts,shrinkImage,priceHtml} from './js/ui.js';
+import {$,esc,money,img,toast,logout,ic,ICONS,normPhone,PHONE_ERR,statusSelect,itemTxt,stockTxt,setupAlerts,shrinkImage,priceHtml,thumbOf,upMedia,upProductPhoto} from './js/ui.js';
 const a=await requireRole(['admin']);if(!a)throw 0;
 
 const CAT_ICONS=Object.keys(ICONS).slice(0,16);  // les 16 premières icônes sont celles des niches
@@ -112,13 +112,13 @@ async function run(q,ok){const {error}=await q;toast(error?error.message:ok,!!er
 // ---------- Données ----------
 let D={},OF='all',PF='all';
 async function load(){
- const [mw,s,p,c,o,nc,om]=await Promise.all([
+ const [mw,s,p,c,o,nc,om,mt]=await Promise.all([
   sb.from('member_whitelist').select('*').order('created_at',{ascending:false}),
   sb.from('seller_profiles').select('*').order('created_at'),
-  sb.from('products').select('id,name,description,price_fcfa,promo_price_fcfa,is_approved,is_available,stock,option_label,options,category_id,seller_id,created_at,seller_profiles(shop_name),product_images(path,position)').order('created_at',{ascending:false}).limit(500),
+  sb.from('products').select('id,name,description,price_fcfa,promo_price_fcfa,is_approved,is_available,stock,option_label,options,category_id,seller_id,created_at,seller_profiles(shop_name),product_images(path,thumb_path,position)').order('created_at',{ascending:false}).limit(500),
   sb.from('categories').select('id,name,icon').order('name'),
   sb.from('seller_orders').select('id,ref,total,status,created_at,seller_id,seller_profiles(shop_name),orders(profiles(full_name,phone,email)),order_items(product_id,name,qty,option)').order('created_at',{ascending:false}).limit(200),
-  sb.rpc('admin_unconfirmed'),sb.rpc('admin_orphan_media')]);
+  sb.rpc('admin_unconfirmed'),sb.rpc('admin_orphan_media'),sb.rpc('admin_media_todo')]);
  for(const r of [mw,s,p,c,o])if(r.error)toast('Chargement incomplet : '+r.error.message,1);
  const MW=mw.data||[],S=s.data||[],phones=MW.map(x=>x.phone).filter(Boolean),emails=MW.map(x=>x.email).filter(Boolean);
  // Comptes utiles : propriétaires des boutiques et comptes portant le numéro ou l'e-mail d'une membre.
@@ -126,7 +126,7 @@ async function load(){
   phones.length&&sb.from('profiles').select(PS).in('phone',phones),emails.length&&sb.from('profiles').select(PS).in('email',emails)]);
  const PR=[...new Map(pq.flatMap(r=>r?.data||[]).map(x=>[x.id,x])).values()];
  // Comptes dont l'e-mail n'est pas confirmé : leur boutique ne peut pas être activée (connexion impossible).
- D={MW,PR,S,P:p.data||[],C:c.data||[],O:o.data||[],NC:new Set(nc.data||[]),OM:om.data||[]};
+ D={MW,PR,S,P:p.data||[],C:c.data||[],O:o.data||[],NC:new Set(nc.data||[]),OM:om.data||[],MT:mt.data||[]};
  overview();ordersView();shopsView();membersView();productsView();nichesView()}
 
 // ---------- Membres : correspondance liste <-> comptes ----------
@@ -136,6 +136,27 @@ const isMember=p=>!!p&&D.MW.some(w=>(w.phone&&w.phone===p.phone)||(w.email&&w.em
 // État d'une membre : none (pas inscrite) | pending (inscrite, à valider) | active | suspended.
 function stateOf(w){const acc=accountsOf(w),sh=D.S.filter(s=>acc.some(p=>p.id===s.id));
  return {acc,sh,st:sh.some(s=>s.status==='active')?'active':sh.length?'suspended':acc.length?'pending':'none'}}
+
+// ---------- Allègement des photos déjà en ligne ----------
+// Chaque photo est téléchargée, réduite si elle est lourde, renvoyée sous un nouveau nom (gardée un an par les téléphones)
+// avec sa vignette pour les produits ; la fiche est mise à jour, puis l'ancien fichier effacé. Interrompu : on relance, ça reprend.
+async function lighten(L,b){
+ if(!confirm(`Alléger ${L.length} ${pl(L.length,'photo','photos')} ?\nGardez cette page ouverte jusqu’à la fin (quelques minutes). Les photos restent visibles pendant l’opération.`))return;
+ b.disabled=true;let ok=0,ko=0;const rm=p=>sb.storage.from('shop-media').remove(p.filter(Boolean));
+ for(const x of L){b.textContent=`Allègement… ${ok+ko+1} / ${L.length}`;
+  try{const r=await fetch(img(x.path));if(!r.ok)throw new Error('Photo introuvable');
+   const bl=await r.blob(),f=new File([bl],x.path.split('/').pop(),{type:bl.type||'image/jpeg'}),dir=x.path.slice(0,x.path.lastIndexOf('/'));
+   const max=x.kind==='logo'?320:1280,heavy=f.size>(x.kind==='logo'?60:350)*1024||f.type==='image/png';
+   const nf=heavy?await shrinkImage(f,max,{force:true}):f;
+   if(x.kind==='img'){const ph=await upProductPhoto(dir,nf);
+    const {data,error}=await sb.from('product_images').update(ph).eq('id',x.id).eq('path',x.path).select('id');
+    if(error||!data?.length){await rm([ph.path,ph.thumb_path]);throw error||new Error('Photo retirée entre-temps')}}
+   else{const p=await upMedia(dir,nf,x.kind);
+    const {data,error}=await sb.from('seller_profiles').update({[x.kind+'_path']:p}).eq('id',x.id).eq(x.kind+'_path',x.path).select('id');
+    if(error||!data?.length){await rm([p]);throw error||new Error('Image remplacée entre-temps')}}
+   await rm([x.path]);ok++}
+  catch(e){ko++;console.warn('Allègement',x.path,e)}}
+ toast(ko?`${ok} ${pl(ok,'photo allégée','photos allégées')}, ${ko} en échec : relancez plus tard`:`${ok} ${pl(ok,'photo allégée','photos allégées')}`,!!ko);load()}
 
 // ---------- Tableau de bord ----------
 function overview(){const {MW,PR,S,P,C,O}=D,ST_=MW.map(stateOf);
@@ -160,6 +181,11 @@ function overview(){const {MW,PR,S,P,C,O}=D,ST_=MW.map(stateOf);
    $('#om').disabled=true;let err=null;
    for(let i=0;i<OM.length;i+=100){const {error}=await sb.storage.from('shop-media').remove(OM.slice(i,i+100).map(x=>x.name));if(error)err=error}
    toast(err?err.message:'Stockage nettoyé',!!err);load()}}
+ // Photos à alléger (bande passante Supabase) : anciennes photos sans vignette, logos et couvertures sans cache long.
+ const MT=D.MT,mt=MT.reduce((s,x)=>s+Number(x.size),0)/1048576;
+ if(MT.length){$('#todo').insertAdjacentHTML('beforeend',`<p class="row" style="margin-top:10px;align-items:center"><span class="mut">${MT.length} ${pl(MT.length,'photo à alléger','photos à alléger')} (${mt.toFixed(1).replace('.',',')} Mo) : le site sera plus rapide et consommera moins</span><button type="button" class="btn sm ghost" id="mt">Alléger les photos</button></p>`);
+  $('#mt').onclick=()=>lighten(MT,$('#mt'))}
+
  const top=[...S].sort((x,y)=>P.filter(p=>p.seller_id===y.id).length-P.filter(p=>p.seller_id===x.id).length).slice(0,5);
  $('#tops').innerHTML=top.length?top.map(x=>{const n=P.filter(p=>p.seller_id===x.id).length;return `<a class="mini-row" href="boutique/vendeuse.html?id=${x.id}" target="_blank">${logo(x)}<span><b>${esc(x.shop_name)}</b><small>${esc(x.location||'')}</small></span><em>${n} ${pl(n,'produit')}</em></a>`}).join('')
   :empty('store','Aucune boutique','Les boutiques apparaissent quand les membres se connectent.','<a class="btn sm" href="#membres">Ajouter une membre</a>','sm');
@@ -208,7 +234,7 @@ function productsView(){const q=$('#pq').value.trim().toLowerCase(),{P,C}=D,cat=
  $('#pf').innerHTML=F.map(([k,l,t])=>`<button type="button" class="chip${PF===k?' on':''}" data-act="pf" data-id="${k}">${l} <i>${P.filter(t).length}</i></button>`).join('');
  const L=P.filter(f).filter(x=>!q||x.name.toLowerCase().includes(q)||(x.seller_profiles?.shop_name||'').toLowerCase().includes(q));
  $('#pl').innerHTML=L.length?'<div class="tw"><table><tr><th>Produit</th><th>Niche</th><th>Prix</th><th>État</th><th></th></tr>'+L.map(x=>{const im=[...x.product_images].sort((a,b)=>a.position-b.position)[0];
-  return `<tr><td><div class="cell"><img class="th" src="${img(im?.path)}" alt=""><span><b>${esc(x.name)}</b><br><small class="mut">${esc(x.seller_profiles?.shop_name)}</small></span></div></td><td><small>${esc(cat(x.category_id))}</small></td><td class="pr"><b>${priceHtml(x)}</b></td>
+  return `<tr><td><div class="cell"><img class="th" src="${img(thumbOf(im))}" alt=""><span><b>${esc(x.name)}</b><br><small class="mut">${esc(x.seller_profiles?.shop_name)}</small></span></div></td><td><small>${esc(cat(x.category_id))}</small></td><td class="pr"><b>${priceHtml(x)}</b></td>
   <td><span class="badge ${x.is_approved?'ok':'no'}">${x.is_approved?'Publié':'Désactivé'}</span>${x.is_available?'':' <span class="badge">Indisponible</span>'}${stockTxt(x)?`<br><small class="mut">${stockTxt(x)}</small>`:''}</td>
   <td><div class="acts-row"><a class="btn ghost sm" href="boutique/produit.html?id=${x.id}" target="_blank" title="Voir">${ic('ext')}</a>${btn('ep',x.id,ic('edit')+'Modifier')}${btn('ap',x.id,x.is_approved?'Désactiver':'Réactiver','btn ghost sm',` data-v="${x.is_approved}"`)}${btn('dp',x.id,ic('trash'),'btn ghost sm',' title="Supprimer"')}</div></td></tr>`}).join('')+'</table></div>'
   :P.length?empty('box','Aucun produit ne correspond','Modifiez la recherche ou le filtre.'):empty('box','Aucun produit pour le moment','Les produits apparaissent ici dès qu’une vendeuse les publie depuis son espace.')}
@@ -237,9 +263,9 @@ const ACTS={
   edit('Modifier la boutique',[{k:'shop_name',l:'Nom de la boutique',v:x.shop_name},{k:'whatsapp',l:'WhatsApp (ex. 77 123 45 67)',t:'tel',v:x.whatsapp},{k:'location',l:'Localisation',v:x.location},{k:'description',l:'Description',t:'area',v:x.description},{k:'logo',l:'Nouveau logo (facultatif)',t:'file'}],async(v,f)=>{
    const w=v.whatsapp.trim()?normPhone(v.whatsapp):null;if(v.whatsapp.trim()&&!w)throw new Error(PHONE_ERR);
    if(v.shop_name.trim().length<2)throw new Error('Nom de boutique trop court.');
-   const o={shop_name:v.shop_name.trim(),whatsapp:w,location:v.location.trim(),description:v.description.trim()},fl=await shrinkImage(f.logo.files[0],600);
+   const o={shop_name:v.shop_name.trim(),whatsapp:w,location:v.location.trim(),description:v.description.trim()},fl=await shrinkImage(f.logo.files[0],320,{force:!!f.logo.files[0]});
    if(fl){if(!IMG_OK(fl))throw new Error('Image invalide : JPG, PNG ou WebP, 3 Mo maximum.');
-    const path=`${x.id}/logo-${Date.now()}.${fl.type.split('/')[1]}`,u=await sb.storage.from('shop-media').upload(path,fl,{contentType:fl.type});if(u.error)throw u.error;o.logo_path=path}
+    o.logo_path=await upMedia(x.id,fl,'logo')}
    const {error}=await sb.from('seller_profiles').update(o).eq('id',x.id);if(error)throw error;
    if(o.logo_path&&x.logo_path)await sb.storage.from('shop-media').remove([x.logo_path])})}, // ancien logo effacé du stockage
  ap:(id,b)=>run(sb.from('products').update({is_approved:b.dataset.v!=='true'}).eq('id',id),b.dataset.v==='true'?'Produit désactivé':'Produit réactivé'),
@@ -253,7 +279,7 @@ const ACTS={
  dp:async id=>{const x=D.P.find(y=>y.id===id);
   if(!confirm(`Supprimer définitivement « ${x.name} » et ses photos ?\nLes commandes passées gardent leur historique.`))return;
   const {error}=await sb.from('products').delete().eq('id',x.id);if(error)return toast(error.message,1);
-  if(x.product_images.length)await sb.storage.from('shop-media').remove(x.product_images.map(i=>i.path));
+  if(x.product_images.length)await sb.storage.from('shop-media').remove(x.product_images.flatMap(i=>[i.path,i.thumb_path]).filter(Boolean));
   toast('Produit supprimé');load()},
  dc:id=>{const x=D.C.find(y=>y.id===id),n=D.P.filter(y=>y.category_id===x.id).length;
   if(!confirm(n?`Supprimer la niche « ${x.name} » ?\n${n} produit(s) n’auront plus de niche (ils restent en ligne).`:`Supprimer la niche « ${x.name} » ?`))return;

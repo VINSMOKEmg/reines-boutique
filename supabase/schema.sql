@@ -34,7 +34,8 @@ create table products (
 create table product_images (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references products(id) on delete cascade,
-  path text not null, position int not null default 0);
+  path text not null, position int not null default 0,
+  thumb_path text); -- vignette ≈ 480 px pour les listes (vide = anciennes photos pas encore allégées)
 create table orders (
   id uuid primary key default gen_random_uuid(), ref text not null unique,
   client_id uuid not null references profiles(id), created_at timestamptz not null default now(),
@@ -329,11 +330,27 @@ begin
     select o.name, coalesce((o.metadata->>'size')::bigint,0)
     from storage.objects o
     where o.bucket_id='shop-media' and o.created_at < now()-interval '1 day'
-      and not exists(select 1 from product_images i where i.path=o.name)
+      and not exists(select 1 from product_images i where i.path=o.name or i.thumb_path=o.name)
       and not exists(select 1 from seller_profiles s where s.logo_path=o.name or s.cover_path=o.name)
     order by o.created_at;
 end $$;
 revoke execute on function admin_orphan_media() from public, anon; grant execute on function admin_orphan_media() to authenticated;
+-- kind : 'img' (id = product_images.id), 'logo' ou 'cover' (id = boutique). Les plus lourdes d'abord.
+create function admin_media_todo() returns table(kind text, id uuid, path text, size bigint) language plpgsql stable security definer set search_path=public,private,storage as $$
+begin
+  if not is_admin() then raise exception 'Réservé à l''administrateur'; end if;
+  return query
+    select t.kind, t.id, t.path, coalesce((o.metadata->>'size')::bigint,0)
+    from (
+      select 'img'::text kind, i.id, i.path from product_images i where i.thumb_path is null
+      union all select 'logo', s.id, s.logo_path from seller_profiles s where s.logo_path is not null
+      union all select 'cover', s.id, s.cover_path from seller_profiles s where s.cover_path is not null
+    ) t
+    join storage.objects o on o.bucket_id='shop-media' and o.name=t.path
+    where t.kind='img' or coalesce(o.metadata->>'cacheControl','') <> 'max-age=31536000'
+    order by 4 desc;
+end $$;
+revoke execute on function admin_media_todo() from public, anon; grant execute on function admin_media_todo() to authenticated;
 
 -- PANIER DU COMPTE : il suit la cliente d'un appareil à l'autre. Contenu [{ id, qty, opt }] non garanti : place_order revérifie tout.
 create table carts (

@@ -9,13 +9,13 @@
 <div class="app-shell"><aside class="app-side" id="sidebar"></aside><main class="app-main"><header class="app-top" id="top"></header><div id="bn"></div><div id="app"></div></main></div>
 <script type="module">
 import {sb} from './js/supabase.js';
-import {$,esc,img,toast,ic,seller,normPhone,PHONE_ERR,shrinkImage} from './js/ui.js';
+import {$,esc,img,toast,ic,seller,normPhone,PHONE_ERR,shrinkImage,upMedia} from './js/ui.js';
 const S=await seller('vendeuse/profil-boutique.html',{title:'Ma boutique',sub:'Ce que les clientes voient sur votre page boutique. Le numéro WhatsApp reçoit leurs commandes.',
  actions:u=>`<a class="btn ghost" href="boutique/vendeuse.html?id=${u.id}" target="_blank">${ic('ext')}Voir ma boutique</a>`});
 if(!S)throw 0;
 const {u,shop}=S;
 const ok=f=>f&&['image/jpeg','image/png','image/webp'].includes(f.type)&&f.size<=3*1024*1024;
-const up=async(f,tag)=>{const path=`${u.id}/${tag}-${Date.now()}.${f.type.split('/')[1]}`;const {error}=await sb.storage.from('shop-media').upload(path,f,{contentType:f.type});if(error)throw error;return path};
+const up=(f,tag)=>upMedia(u.id,f,tag); // nom nouveau à chaque envoi, gardé un an par les téléphones
 
 $('#app').innerHTML=`<div class="form-layout"><div class="panel"><form id="f" class="f">
  <h2 class="sect">Identité</h2>
@@ -45,7 +45,7 @@ f.cover.onchange=()=>{const x=f.cover.files[0];if(x)$('#vc').style.backgroundIma
 f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('button');b.disabled=true;
  try{const wa=normPhone(f.whatsapp.value);if(!wa)throw new Error(PHONE_ERR);
   const v={shop_name:f.shop_name.value.trim(),full_name:f.full_name.value.trim(),description:f.description.value.trim(),whatsapp:wa,location:f.location.value.trim(),hours:f.hours.value.trim()};
-  for(const [k,t] of [['logo','logo'],['cover','cover']]){const x=await shrinkImage(f[k].files[0],k==='logo'?600:1600);if(x){if(!ok(x))throw new Error('Image invalide : JPG, PNG ou WebP, 3 Mo maximum.');v[k+'_path']=await up(x,t)}}
+  for(const [k,t] of [['logo','logo'],['cover','cover']]){const x=await shrinkImage(f[k].files[0],k==='logo'?320:1280,{force:!!f[k].files[0]});if(x){if(!ok(x))throw new Error('Image invalide : JPG, PNG ou WebP, 3 Mo maximum.');v[k+'_path']=await up(x,t)}}
   const {error}=await sb.from('seller_profiles').update(v).eq('id',u.id);if(error)throw error;
   // Image remplacée : l'ancienne est effacée du stockage, et le champ vidé pour ne pas renvoyer la même image au prochain enregistrement.
   const old=['logo_path','cover_path'].filter(k=>v[k]&&shop[k]&&shop[k]!==v[k]).map(k=>shop[k]);
