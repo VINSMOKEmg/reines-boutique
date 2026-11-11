@@ -117,7 +117,7 @@ async function load(){
   sb.from('seller_profiles').select('*').order('created_at'),
   sb.from('products').select('id,name,description,price_fcfa,promo_price_fcfa,is_approved,is_available,stock,option_label,options,category_id,seller_id,created_at,seller_profiles(shop_name),product_images(path,position)').order('created_at',{ascending:false}).limit(500),
   sb.from('categories').select('id,name,icon').order('name'),
-  sb.from('seller_orders').select('id,ref,total,status,created_at,seller_id,seller_profiles(shop_name),orders(profiles(full_name,phone,email)),order_items(name,qty,option)').order('created_at',{ascending:false}).limit(200),
+  sb.from('seller_orders').select('id,ref,total,status,created_at,seller_id,seller_profiles(shop_name),orders(profiles(full_name,phone,email)),order_items(product_id,name,qty,option)').order('created_at',{ascending:false}).limit(200),
   sb.rpc('admin_unconfirmed'),sb.rpc('admin_orphan_media')]);
  for(const r of [mw,s,p,c,o])if(r.error)toast('Chargement incomplet : '+r.error.message,1);
  const MW=mw.data||[],S=s.data||[],phones=MW.map(x=>x.phone).filter(Boolean),emails=MW.map(x=>x.email).filter(Boolean);

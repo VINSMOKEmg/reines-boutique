@@ -13,7 +13,7 @@ import {$,toast,seller,sellerOrderTable,empty} from './js/ui.js';
 const S=await seller('vendeuse/mes-commandes.html',{title:'Commandes',sub:'Les demandes de vos clientes. Elles vous écrivent sur WhatsApp avec la référence : mettez à jour le statut au fil de l’échange.'});
 if(!S)throw 0;
 
-const {data,error}=await sb.from('seller_orders').select('id,ref,total,status,created_at,order_items(name,qty,option)').eq('seller_id',S.u.id).order('created_at',{ascending:false});
+const {data,error}=await sb.from('seller_orders').select('id,ref,total,status,created_at,order_items(product_id,name,qty,option)').eq('seller_id',S.u.id).order('created_at',{ascending:false});
 if(error)toast('Chargement impossible : '+error.message,1);
 const O=data||[],FL=[['all','Toutes'],['nouvelle','Nouvelles'],['confirmee','Confirmées'],['livree','Livrées'],['annulee','Annulées']];let F='all';
 function draw(){const L=F==='all'?O:O.filter(x=>x.status===F);
@@ -27,6 +27,6 @@ draw();
 // Nouvelle commande reçue en direct (voir ui.js) : ajoutée en tête de liste, sans recharger la page
 // (un rechargement couperait le son des alertes suivantes).
 document.addEventListener('commande',async e=>{
- const {data:o}=await sb.from('seller_orders').select('id,ref,total,status,created_at,order_items(name,qty,option)').eq('id',e.detail.id).single();
+ const {data:o}=await sb.from('seller_orders').select('id,ref,total,status,created_at,order_items(product_id,name,qty,option)').eq('id',e.detail.id).single();
  if(o&&!O.some(x=>x.id===o.id)){O.unshift(o);draw()}});
 </script></body></html>

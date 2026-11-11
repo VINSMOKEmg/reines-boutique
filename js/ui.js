@@ -99,7 +99,7 @@ ${!p.is_available || p.stock === 0 ? `<p class="mut" style="margin:0">${p.stock 
   : `<div class="acts"><button class="btn" data-add="${p.id}">Ajouter au panier</button></div>`}${p.stock > 0 && p.stock <= 5 ? `<small class="low">Plus que ${p.stock} en stock</small>` : ''}</div></div>`;
 // Stock lisible (vide = illimité) et option choisie, pour les fiches et les tableaux de commandes.
 export const stockTxt = p => p.stock == null ? '' : p.stock === 0 ? 'Épuisé' : p.stock <= 5 ? `Plus que ${p.stock} en stock` : `${p.stock} en stock`;
-export const itemTxt = i => `${esc(i.name)}${i.option ? ` <small class="mut">(${esc(i.option)})</small>` : ''} × ${i.qty}`;
+export const itemTxt = i => `${i.product_id ? `<a class="lnk" href="boutique/produit.html?id=${esc(i.product_id)}" target="_blank" rel="noopener">${esc(i.name)}</a>` : esc(i.name)}${i.option ? ` <small class="mut">(${esc(i.option)})</small>` : ''} × ${i.qty}`;
 
 // Coque de l'espace vendeuse (même interface que l'admin) : vérifie le rôle, remplit la barre latérale (#sidebar)
 // et l'en-tête de page (#top). `sub` et `actions` peuvent être des fonctions (u, shop) => html.

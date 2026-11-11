@@ -170,7 +170,7 @@ begin
       o:=case when coalesce(cardinality(p.options),0)>0 then nullif(trim(coalesce(it->>'option','')),'') end;
       insert into order_items(seller_order_id,product_id,name,unit_price,qty,option) values(soid,p.id,p.name,coalesce(p.promo_price_fcfa,p.price_fcfa),q,o);
       tot:=tot+q*coalesce(p.promo_price_fcfa,p.price_fcfa);
-      lines:=lines||jsonb_build_array(jsonb_build_object('name',p.name,'qty',q,'price',coalesce(p.promo_price_fcfa,p.price_fcfa),'regular',case when p.promo_price_fcfa is not null then p.price_fcfa end,'option',o,'option_label',p.option_label));
+      lines:=lines||jsonb_build_array(jsonb_build_object('id',p.id,'name',p.name,'qty',q,'price',coalesce(p.promo_price_fcfa,p.price_fcfa),'regular',case when p.promo_price_fcfa is not null then p.price_fcfa end,'option',o,'option_label',p.option_label));
     end loop;
     select shop_name, whatsapp into shop from seller_profiles where id=sid;
     res:=res||jsonb_build_array(jsonb_build_object('ref',base||'-'||n,'shop_name',shop.shop_name,'whatsapp',shop.whatsapp,'total',tot,'items',lines));

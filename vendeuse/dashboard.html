@@ -20,7 +20,7 @@ const {u,shop}=S,pl=(n,s,p=s+'s')=>n>1?p:s;
 async function load(){
 const [p,o]=await Promise.all([
  sb.from('products').select('id,is_available,is_approved,product_images(path)').eq('seller_id',u.id),
- sb.from('seller_orders').select('id,ref,total,status,created_at,order_items(name,qty,option)').eq('seller_id',u.id).order('created_at',{ascending:false}).limit(200)]);
+ sb.from('seller_orders').select('id,ref,total,status,created_at,order_items(product_id,name,qty,option)').eq('seller_id',u.id).order('created_at',{ascending:false}).limit(200)]);
 const P=p.data||[],O=o.data||[];
 const nNew=O.filter(x=>x.status==='nouvelle').length,nOn=P.filter(x=>x.is_approved&&x.is_available).length,nOff=P.filter(x=>!x.is_available).length,
  sales=O.filter(x=>x.status==='confirmee'||x.status==='livree').reduce((a,x)=>a+x.total,0);

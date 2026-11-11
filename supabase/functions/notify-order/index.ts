@@ -28,12 +28,15 @@ Deno.serve(async (req) => {
   if (!o) return json({ sent: 0, info: "Commande introuvable, ancienne ou déjà notifiée" });
 
   // Destinataires : la vendeuse de la commande, et les administratrices (toutes boutiques, avec le nom de la boutique).
-  const [{ data: shop }, { data: admins }] = await Promise.all([
+  // Les articles (lus après validation de la commande : pg_net n'appelle qu'une fois la transaction terminée).
+  const [{ data: shop }, { data: admins }, { data: items }] = await Promise.all([
     sb.from("seller_profiles").select("shop_name").eq("id", o.seller_id).maybeSingle(),
-    sb.from("profiles").select("id").eq("role", "admin")]);
+    sb.from("profiles").select("id").eq("role", "admin"),
+    sb.from("order_items").select("name,qty,option").eq("seller_order_id", o.id)]);
   const adminIds = (admins ?? []).map((a) => a.id).filter((id) => id !== o.seller_id);
   const { data: subs } = await sb.from("push_subscriptions").select("endpoint,p256dh,auth,user_id").in("user_id", [o.seller_id, ...adminIds]);
-  const body = `${o.ref} · ${fcfa(o.total)}`;
+  const what = (items ?? []).map((i) => `${i.qty} × ${i.name}${i.option ? ` (${i.option})` : ""}`).join(", ");
+  const body = `${what ? (what.length > 120 ? what.slice(0, 119) + "…" : what) + "\n" : ""}${o.ref} · ${fcfa(o.total)}`;
   const forSeller = JSON.stringify({ title: "Nouvelle commande", body, tag: o.ref, url: "vendeuse/mes-commandes.html" });
   const forAdmin = JSON.stringify({ title: `Nouvelle commande · ${shop?.shop_name ?? "boutique"}`, body, tag: o.ref, url: "admin/index.html" });
   const res = await Promise.allSettled((subs ?? []).map((s) =>

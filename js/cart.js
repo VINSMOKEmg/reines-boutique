@@ -49,6 +49,7 @@ export const count = () => get().reduce((a, i) => a + i.qty, 0);
 export function add(id, q = 1, opt = '') { const c = get(), i = c.find(x => key(x) === key({ id, opt })); i ? i.qty = Math.min(99, i.qty + q) : c.push({ id, qty: q, opt }); save(c); }
 export const setQty = (k, q) => save(get().map(i => key(i) === k ? { ...i, qty: Math.min(99, q) } : i).filter(i => i.qty > 0));
 export const clear = () => save([]);
+const SITE = 'https://www.lesreinesboutique.com';
 const fmt = n => Number(n).toLocaleString('fr-FR') + ' FCFA';
 // Numéro au format international sans +, espaces ni tirets.
 export const waLink = (num, text) => `https://wa.me/${String(num).replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
@@ -59,7 +60,9 @@ export const waMessage = (o, x = {}) => [
   '',
   'Je souhaite commander sur *Les Reines de l’Entrepreneuriat* :',
   '',
-  ...o.items.map(i => `▪️ ${i.qty} × ${i.name}${i.option ? ` (${i.option_label || 'Option'} : ${i.option})` : ''} — ${fmt(i.qty * i.price)}${i.regular ? ` (promo, au lieu de ${fmt(i.qty * i.regular)})` : ''}`),
+  // Lien de chaque produit sous sa ligne : la vendeuse voit exactement lequel (WhatsApp affiche la photo du premier lien).
+  ...o.items.flatMap(i => [`▪️ ${i.qty} × ${i.name}${i.option ? ` (${i.option_label || 'Option'} : ${i.option})` : ''} — ${fmt(i.qty * i.price)}${i.regular ? ` (promo, au lieu de ${fmt(i.qty * i.regular)})` : ''}`,
+    ...(i.id ? [`   ${SITE}/boutique/produit.html?id=${i.id}`] : [])]),
   '',
   `*Total : ${fmt(o.total)}*`,
   `Référence : *${o.ref}*`,
